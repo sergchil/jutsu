@@ -99,11 +99,20 @@ def transform_frontmatter(out_rel: str, text: str, spec: dict) -> str:
     elif agent:
         name = agent.group(1)
         kept = [f"name: {name}" if l.startswith("name:") else l for l in kept]
-        if any(l.startswith("is_background:") for l in lines):
-            kept.append("background: true")
     elif principle:
         pass
     return "---\n" + "\n".join(kept) + "\n---\n" + text[m.end():]
+
+
+def load_substitutions() -> list:
+    """port/substitutions.json first, then port/subs/*.json in name order."""
+    subs = list(load_json(SUBS)["substitutions"])
+    for extra in sorted((ROOT / "port" / "subs").glob("*.json")):
+        for rule in load_json(extra)["substitutions"]:
+            rule = dict(rule)
+            rule.setdefault("id", f"{extra.stem}:{rule['pattern'][:40]}")
+            subs.append(rule)
+    return subs
 
 
 def compile_subs(subs: list) -> list:
@@ -146,9 +155,9 @@ def resolve_p3_token(out_rel: str, text: str) -> str:
     return P3_TOKEN.sub(rel, text)
 
 
-def build(out_dir: Path, relock: bool = False) -> list[str]:
+def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[str]:
     spec = load_json(SPEC)
-    compiled = compile_subs(load_json(SUBS)["substitutions"])
+    compiled = compile_subs(load_substitutions())
     lock = load_json(LOCK) if LOCK.exists() else {}
     vendor = ROOT / spec["vendor"]
     notes: list[str] = []
@@ -169,7 +178,7 @@ def build(out_dir: Path, relock: bool = False) -> list[str]:
             have = sha256(src)
             if relock:
                 lock[out_rel] = have
-            elif want != have:
+            elif check_lock and want != have:
                 raise BuildError(
                     f"override {out_rel}: upstream {rel} changed (lock {str(want)[:12]} != {have[:12]}). "
                     "Re-merge the override against the new upstream, then run build.py --relock.")
@@ -187,7 +196,7 @@ def build(out_dir: Path, relock: bool = False) -> list[str]:
         shutil.copymode(src, dest)
 
     for out_rel in sorted(lock):
-        if out_rel not in produced and not relock:
+        if out_rel not in produced and not relock and check_lock:
             raise BuildError(f"lock entry {out_rel} has no upstream file any more; remove it")
     for ov in sorted(OVERRIDES.rglob("*")):
         if ov.is_file():
@@ -227,10 +236,19 @@ def build(out_dir: Path, relock: bool = False) -> list[str]:
     return notes
 
 
+RUNTIME_ONLY = ("node_modules",)
+
+
+def tree_files(root: Path) -> set[str]:
+    """Files in a plugin tree, without dependencies the bundled scripts install at runtime."""
+    return {p.relative_to(root).as_posix() for p in root.rglob("*")
+            if p.is_file() and not any(part in RUNTIME_ONLY for part in p.relative_to(root).parts)}
+
+
 def trees_equal(a: Path, b: Path) -> list[str]:
     diffs = []
-    files_a = {p.relative_to(a).as_posix() for p in a.rglob("*") if p.is_file()}
-    files_b = {p.relative_to(b).as_posix() for p in b.rglob("*") if p.is_file()} if b.exists() else set()
+    files_a = tree_files(a)
+    files_b = tree_files(b) if b.exists() else set()
     for rel in sorted(files_a ^ files_b):
         diffs.append(f"only in {'build' if rel in files_a else 'plugin/'}: {rel}")
     for rel in sorted(files_a & files_b):
@@ -246,7 +264,24 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--relock", action="store_true")
+    ap.add_argument("--out", help="write the build here instead of plugin/ (for previews)")
+    ap.add_argument("--no-lock", action="store_true", help="skip the override lock check (previews only)")
     args = ap.parse_args()
+    if args.out:
+        out = Path(args.out).resolve()
+        if out == OUT or OUT in out.parents or out in OUT.parents:
+            print("--out must be outside plugin/", file=sys.stderr)
+            return 2
+        if out.exists():
+            shutil.rmtree(out)
+        out.mkdir(parents=True)
+        try:
+            notes = build(out, relock=False, check_lock=not args.no_lock)
+        except BuildError as exc:
+            print(f"build failed: {exc}", file=sys.stderr)
+            return 1
+        print(f"built {out}. " + " ".join(notes))
+        return 0
     with tempfile.TemporaryDirectory(prefix="p3build-") as tmp:
         tmp_out = Path(tmp) / "plugin"
         tmp_out.mkdir()

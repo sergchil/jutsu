@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Swarm
 
-Fan out N parallel cloud workers. They may cover separate slices, race the same brief, or mix both. The parent waits, aggregates, and returns one report.
+Fan out N parallel workers. They may cover separate slices, race the same brief, or mix both. The parent waits, aggregates, and returns one report.
 
 ## Start
 
@@ -21,17 +21,17 @@ Open a todolist with one entry per phase before launching anything.
 
 1. State the done predicate and the artifact or report the swarm must return.
 2. Choose the shape. Partition into slices, race N workers on identical briefs, or mix both. For a race or mixed shape, declare `first pass`, `rank all`, or `best-of` before spawning.
-3. Set N from the user or derive it from the shape. N is total workers, not the cloud concurrency limit.
-4. Pick the worker model from the `swarm workers` line in `~/.cursor/rules/pstack-models.mdc`. If the rule or that line is missing, use `grok-4.7-xhigh-fast`. For `auto` or `inherit-parent`, omit `model` so the workers run on the parent model. If the Task tool rejects a slug, use the default and say so. If it rejects the default, use the closest valid slug of the same family from its error message. For a model race, name each arm's model up front.
-5. Give each worker its own writable output when it writes. When workers verify or measure commits, each brief names the exact SHAs. A measurement brief also names the method (sample count, what one sample is, order). The worker records both in its result.
+3. Set N from the user or derive it from the shape. N is total workers, not how many run at once.
+4. Pick the worker `model` and `effort` from the `swarm workers` line in `p3-models.md`. If the file or that line is missing, use its default in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). For `inherit`, omit both so the workers run on the parent model. If the `Agent` tool rejects a value, use the default and say so. A line that names a T3 target runs the workers through `delegate_task` per [the runtime's Subagents](../../skills/poteto-mode/references/runtime.md#subagents). Pass `options` with `effort` on every call and a distinct `clientRequestId` per worker and per respawn, and read each result with `task_status` after the wake. A worker that reviews never runs below `high` effort. For a model race, name each arm's model and effort up front, and report the ones each arm actually ran at.
+5. Give each worker its own writable output when it writes. A worker that writes to the repo gets its own worktree, created from your HEAD before you spawn it, per [the runtime's Isolation](../../skills/poteto-mode/references/runtime.md#isolation). Do not use `Agent` `isolation: "worktree"` for it, since that branches from the remote default branch. When workers verify or measure commits, each brief names the exact SHAs. A measurement brief also names the method (sample count, what one sample is, order). The worker records both in its result.
 
 ## Phase B: Fan out
 
-Spawn all N workers in one message with `subagent_type: generalPurpose`, `environment: "cloud"`, `run_in_background: true`, and the step 4 model, left unset for `auto` or `inherit-parent`. Use `environment: "local"` only when the worker needs access to something on the user's computer.
+Spawn all N workers in one message with `subagent_type: "general-purpose"`, `run_in_background: true`, and the step 4 `model` and `effort`, left unset for `inherit`. Workers run on this machine, so each writer works only in its own worktree. Launch workers as separate T3 threads (`t3_thread_launch`) only when the user asked for separate threads, and then follow the launched-thread rules in [the runtime's Isolation](../../skills/poteto-mode/references/runtime.md#isolation).
 
-When a worker must start from a non-default pushed branch, pass `cloud_base_branch`.
+When a worker must start from a branch other than your HEAD, create its worktree from that branch.
 
-Every brief stands alone. Include the goal, scope, exact slice or race arm, how to verify, and what to report. Reports use `PASS`, `ISSUES`, or `BLOCKED` with evidence. A worker that can prove a defect reports `ISSUES` and lists every issue it can prove, not only the first.
+Every brief stands alone. Include the goal, scope, exact slice or race arm, how to verify, and what to report. Never put `$(...)` or shell-expanding backticks in a brief a worker pastes into a command. Reports use `PASS`, `ISSUES`, or `BLOCKED` with evidence. A worker that can prove a defect reports `ISSUES` and lists every issue it can prove, not only the first.
 
 If a worker drops out, proceed with N-1 and note it.
 

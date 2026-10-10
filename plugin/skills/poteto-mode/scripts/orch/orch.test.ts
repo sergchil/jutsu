@@ -159,6 +159,56 @@ esac
   }
 }
 
+async function withFakeGh<T>({
+  directory,
+  operation,
+  prs,
+}: {
+  directory: string;
+  operation: () => Promise<T>;
+  prs: Readonly<Record<number, Readonly<Record<string, unknown>>>>;
+}): Promise<T> {
+  const bin = join(directory, "gh-bin");
+  await mkdir(bin);
+  const cases = Object.entries(prs)
+    .map(
+      ([pr, value]) =>
+        `  "pr view ${pr} --json number,state,headRefName,baseRefName,headRefOid")\n    printf '%s\\n' '${JSON.stringify(value)}'\n    ;;`
+    )
+    .join("\n");
+  const gh = join(bin, "gh");
+  await writeFile(
+    gh,
+    `#!/usr/bin/env bash
+set -euo pipefail
+if [ "$(pwd -P)" != "${realpathSync(join(directory, "repo"))}" ]; then
+  printf 'gh ran outside the fixture repo: %s\\n' "$(pwd -P)" >&2
+  exit 2
+fi
+case "$*" in
+${cases}
+  *)
+    printf 'no pull requests found for %s\\n' "$*" >&2
+    exit 1
+    ;;
+esac
+`
+  );
+  await chmod(gh, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${bin}:${originalPath ?? ""}`;
+  try {
+    return await operation();
+  } finally {
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
+  }
+}
+
 function runCli(
   args: readonly string[],
   env: Readonly<Record<string, string | undefined>> = process.env
@@ -478,6 +528,60 @@ describe("Store", () => {
     });
   });
 
+  it("resolves a GitHub frontier in pinned order and rejects a drifted base", async () => {
+    const { directory, store } = await initializedStore();
+    const stack = await makeGitStack(directory);
+    const head = (n: number) => `${n}`.padStart(40, "a");
+    const prs = {
+      10: { number: 10, state: "MERGED", headRefName: "stack/merged", baseRefName: "main", headRefOid: head(10) },
+      13: { number: 13, state: "CLOSED", headRefName: "stack/closed", baseRefName: "main", headRefOid: head(13) },
+      11: { number: 11, state: "OPEN", headRefName: "stack/open", baseRefName: "main", headRefOid: head(11) },
+      12: { number: 12, state: "OPEN", headRefName: "stack/top", baseRefName: "stack/open", headRefOid: head(12) },
+      14: { number: 14, state: "OPEN", headRefName: "stack/drifted", baseRefName: "main", headRefOid: head(14) },
+    };
+
+    await withFakeGh({
+      directory,
+      prs,
+      operation: async () => {
+        expect(
+          await store.frontier.set({
+            repo: stack.repo,
+            prs: [10, 13, 11, 12],
+            source: "gh",
+          })
+        ).toEqual({
+          generation: 1,
+          prs: [
+            { pr: 10, branches: "stack/merged", sha: head(10), state: "MERGED" },
+            { pr: 13, branches: "stack/closed", sha: head(13), state: "CLOSED" },
+            { pr: 11, branches: "stack/open", sha: head(11), state: "OPEN" },
+            { pr: 12, branches: "stack/top", sha: head(12), state: "OPEN" },
+          ],
+          lowestUnmerged: 11,
+        });
+        await expect(
+          store.frontier.set({
+            repo: stack.repo,
+            prs: [11, 12, 14],
+            source: "gh",
+          })
+        ).rejects.toThrow(
+          "frontier chain mismatch: #14 bases on main, not on #12 (stack/top)"
+        );
+        await expect(
+          store.frontier.set({ repo: stack.repo, prs: [99], source: "gh" })
+        ).rejects.toThrow("gh pr view 99 failed");
+        await expect(
+          store.frontier.set({ repo: stack.repo, source: "gh" })
+        ).rejects.toThrow(
+          "--source gh needs --prs <n,...> in stack order, bottom first"
+        );
+        expect((await store.frontier.show()).generation).toBe(1);
+      },
+    });
+  });
+
   it("rejects unparseable Graphite output loudly", async () => {
     const { directory, store } = await initializedStore();
     const stack = await makeGitStack(directory);
@@ -549,11 +653,25 @@ describe("orch CLI", () => {
     expect(frontierHelp.code).toBe(0);
     expect(frontierHelp.stdout).toContain("--repo <dir>");
     expect(frontierHelp.stdout).toContain("--prs <n,...>");
+    expect(frontierHelp.stdout).toContain("--source <gt|gh>");
 
     const directory = await makeDirectory();
     const invalid = runCli(["--store", directory, "unit", "add", "u1"]);
     expect(invalid.code).toBe(1);
     expect(invalid.stderr).toContain("required option '--track <track>'");
+
+    const badSource = runCli([
+      "--store",
+      directory,
+      "frontier",
+      "set",
+      "--repo",
+      directory,
+      "--source",
+      "svn",
+    ]);
+    expect(badSource.code).toBe(1);
+    expect(badSource.stderr).toContain("must be gt or gh");
   });
 
   it("accepts ORCH_STORE and emits complete JSON", async () => {

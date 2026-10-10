@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Read-only worktree prune audit. Classifies every git worktree by size, merge
-# state, uncommitted work, remote/PR state, and the most recent chat that
-# operated in it. Emits a table sorted by size with a suggested bucket. Never
-# deletes anything; deletion stays a human-gated step in the playbook.
+# state, uncommitted work, remote/PR state, and the most recent Claude session
+# that operated in it. Emits a table sorted by size with a suggested bucket.
+# Never deletes anything; deletion stays a human-gated step in the playbook.
 #
 # Usage: worktree-audit.sh [repo-path]   (defaults to the current repo)
 set -u
@@ -22,9 +22,22 @@ prs=$(mktemp)
 gh pr list --author "@me" --state all --limit 1000 \
 	--json number,state,headRefName 2>/dev/null > "$prs" || echo "[]" > "$prs"
 
-# Transcripts dir: ~/.cursor/projects/<slugified-repo-path>/agent-transcripts.
-slug=$(printf '%s' "$main_wt" | sed 's#^/##; s#/#-#g')
-transcripts="$HOME/.cursor/projects/$slug/agent-transcripts"
+# Transcript dirs: Claude keeps one per working directory under
+# ${CLAUDE_CONFIG_DIR:-~/.claude}/projects, named for the cwd with every
+# character outside [A-Za-z0-9] turned into "-". A name over 200 characters is
+# cut to 200 plus a hash suffix. Subagent transcripts sit in
+# <session>/subagents/ inside the same dir. T3 threads run Claude with their
+# worktree as the cwd, and T3 creates worktrees under ~/.t3/worktrees/<repo>/
+# (or the folder set in its Storage settings), so scan the dir of every
+# checkout of this repo, not only the main one.
+projects="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
+transcripts=()
+while read -r p; do
+	enc=$(printf '%s' "$p" | sed 's/[^a-zA-Z0-9]/-/g')
+	[ ${#enc} -gt 200 ] && enc="${enc:0:200}-*"
+	for d in "$projects"/$enc; do [ -d "$d" ] && transcripts+=("$d"); done
+done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
+command -v rg >/dev/null 2>&1 || echo "warn: rg not found; LAST_CHAT is empty, so check every row by hand" >&2
 now=$(date +%s)
 
 printf "SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT\tBUCKET\tWORKTREE\n"
@@ -60,11 +73,11 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
 		'.[] | select(.headRefName==$b) | "#\(.number)/\(.state)"' "$prs" 2>/dev/null | head -1)
 	[ -z "$pr" ] && pr="-"
 
-	# Most recent chat whose transcript operated in this worktree. Match path
+	# Most recent session whose transcript operated in this worktree. Match path
 	# followed by "/" or a quote so glint-482 does not match glint-482-r37.
 	last="-"; last_ts=0
-	if [ -d "$transcripts" ]; then
-		f=$(rg -l -e "${wt}/" -e "${wt}\"" "$transcripts" 2>/dev/null \
+	if [ ${#transcripts[@]} -gt 0 ]; then
+		f=$(rg -l -F --no-ignore --hidden -e "${wt}/" -e "${wt}\"" "${transcripts[@]}" 2>/dev/null \
 			| xargs stat -f '%m %N' 2>/dev/null | sort -rn | head -1)
 		if [ -n "$f" ]; then last_ts=$(echo "$f" | awk '{print $1}')
 			last=$(date -r "$last_ts" '+%Y-%m-%d' 2>/dev/null); fi

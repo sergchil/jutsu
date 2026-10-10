@@ -2,8 +2,8 @@
 
 **You own the measurement story. Plan, review, verify the numbers.** Tie every fix to a measurement, don't read source instead of measuring.
 
-1. Capture a baseline trace via the matching control skill. Vet the baseline, and each later number, with the **benchmark-checklist** skill.
-2. `how` to ground hypotheses. Don't claim a perf ceiling without running it first.
+1. Capture a baseline trace on the matching surface per [the runtime's Proof surfaces](../references/runtime.md#proof-surfaces). Vet the baseline, and each later number, with the **benchmark-checklist** skill (`../../../skills/benchmark-checklist/SKILL.md`).
+2. `how` (`../../../skills/how/SKILL.md`) to ground hypotheses. Don't claim a perf ceiling without running it first.
    Try the performance mantras in order, cheapest first:
    1. Don't do it. Stop work whose result nothing uses rather than cheapening it.
    2. Do it, but don't do it again.
@@ -14,8 +14,8 @@
    7. Do it cheaper.
 
    When an earlier mantra meets the target, stop.
-3. Plan the fix from the trace. If it crosses a function boundary, `architect` first. Delegate implementation to a subagent using your configured perf-issue model (default `grok-4.7-xhigh-fast`). Review the diff. Capture a post-fix trace.
-   Apply the **sequence-verifiable-units** principle skill, verifying each attempt before trying the next.
+3. Plan the fix from the trace. If it crosses a function boundary, `architect` (`../../../skills/architect/SKILL.md`) first. Delegate implementation to a subagent using your configured perf-issue model (the `perf-issue` role in [the runtime's Roles](../references/runtime.md#roles)). Review the diff. Capture a post-fix trace.
+   Apply the **sequence-verifiable-units** principle skill (`../../../principles/principle-sequence-verifiable-units.md`), verifying each attempt before trying the next.
 4. Parse and compare the artifacts (JSON to sqlite, diff). "Inconclusive" or wrong-surface is not a pass. Flag it.
 5. Cite the measurement in the PR.
 6. Run **Opening a PR**.

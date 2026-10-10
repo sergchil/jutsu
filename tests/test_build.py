@@ -1,0 +1,85 @@
+"""Tests for tools/build.py and tools/check.py."""
+from __future__ import annotations
+
+import filecmp
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+
+import build  # noqa: E402
+import check  # noqa: E402
+
+
+def build_to(tmp: str) -> Path:
+    out = Path(tmp) / "plugin"
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "build.py"), "--out", str(out)],
+                       capture_output=True, text=True, timeout=120)
+    if r.returncode != 0:
+        raise AssertionError(r.stdout + r.stderr)
+    return out
+
+
+class BuildTest(unittest.TestCase):
+    def test_committed_plugin_is_current(self):
+        r = subprocess.run([sys.executable, str(ROOT / "tools" / "build.py"), "--check"],
+                           capture_output=True, text=True, timeout=120)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_build_is_deterministic(self):
+        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
+            pa, pb = build_to(a), build_to(b)
+            self.assertEqual(build.trees_equal(pa, pb), [])
+
+    def test_built_plugin_passes_the_checker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            errors = check.check(build_to(tmp))
+            self.assertEqual(errors, [], "\n".join(errors[:30]))
+
+    def test_vendor_is_untouched_upstream(self):
+        vendor = ROOT / "vendor" / "pstack"
+        self.assertTrue((vendor / ".cursor-plugin" / "plugin.json").exists())
+        self.assertTrue((vendor / "skills" / "poteto-mode" / "SKILL.md").read_text().startswith("---\nname: Poteto Mode"))
+
+    def test_p3_token_resolves_relative_to_each_file(self):
+        self.assertEqual(build.resolve_p3_token("SKILL.md", "{{p3}}/x"), "./x")
+        self.assertEqual(build.resolve_p3_token("skills/how/SKILL.md", "{{p3}}/x"), "../../x")
+        self.assertEqual(build.resolve_p3_token("skills/poteto-mode/playbooks/a.md", "{{p3}}/x"), "../../../x")
+
+    def test_principles_move_out_of_the_skill_list(self):
+        spec = build.load_json(build.SPEC)
+        self.assertEqual(build.map_path("skills/principle-prove-it-works/SKILL.md", spec),
+                         "principles/principle-prove-it-works.md")
+        self.assertIsNone(build.map_path("automations/benny/README.md", spec))
+        self.assertIsNone(build.map_path(".cursor-plugin/plugin.json", spec))
+
+    def test_frontmatter_drops_cursor_keys_and_hides_skills_from_the_model(self):
+        spec = build.load_json(build.SPEC)
+        src = ("---\nname: Poteto Mode\ndescription: d\ndisable-model-invocation: true\nmode: true\n"
+               "icon: crown\ncolor: yellow\nreminder: r\n---\nbody\n")
+        out = build.transform_frontmatter("skills/poteto-mode/SKILL.md", src, spec)
+        self.assertEqual(out, "---\nname: poteto-mode\ndescription: d\ndisable-model-invocation: true\n---\nbody\n")
+        agent = build.transform_frontmatter("agents/comment-sicko.md",
+                                            "---\nname: Comment Sicko\ndescription: d\nis_background: true\n---\n", spec)
+        self.assertEqual(agent, "---\nname: comment-sicko\ndescription: d\n---\n")
+
+
+class CheckerTest(unittest.TestCase):
+    def test_flags_each_class_of_problem(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = build_to(tmp)
+            bad = plugin / "skills" / "how" / "SKILL.md"
+            bad.write_text(bad.read_text() + "\nUse `Task` with generalPurpose. See [x](missing.md) and `t3_thread_create`. {{p3}}\n")
+            (plugin / "hooks" / "p3-mode").chmod(0o644)
+            text = "\n".join(check.check(plugin))
+            for needle in ("'`Task`'", "'generalPurpose'", "link does not resolve: missing.md",
+                           "not a T3 tool: t3_thread_create", "'{{p3}}'", "missing or not executable"):
+                self.assertIn(needle, text)
+
+
+if __name__ == "__main__":
+    unittest.main()

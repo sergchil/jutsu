@@ -95,7 +95,7 @@ Two writers never share a checkout (principle-separate-before-serializing-shared
 - Read-only children share your checkout.
 - **A child that writes while another writer may overlap** gets its own worktree, created by you before you spawn it, from your current HEAD: `git worktree add <path> -b <branch> HEAD`. Commit first, because uncommitted changes do not reach it. The brief says: work only under the absolute path, prefix every command with `cd <path> &&`, report the branch and head SHA. Check that the diff landed there before you integrate. Remove the worktree after.
 - Do not use `Agent` `isolation: "worktree"` for stacked or branch-based work. It branches from the remote default branch unless the user set `worktree.baseRef: "head"`.
-- **A long-lived owner** (a PR owner in Autopilot or Orchestrate) in T3 is a launched thread: `t3_thread_launch` with `workspaceStrategy: {"type":"worktree","baseRef":"<parent branch>","branch":"<branch>","startFromOrigin":false}` and the brief in `message`. Pass `modelSelection: {instanceId, model, options:[{"id":"effort","value":"<level>"}]}`. Keep the returned `threadId`. Launch has no retry key, so after a lost response check `t3_thread_list` before you launch again. Invoking one of those playbooks is the user's request for separate threads.
+- **A long-lived owner** (a PR owner in Autopilot or Orchestrate) in T3 is a launched thread: `t3_thread_launch` with `workspaceStrategy: {"type":"worktree","baseRef":"<parent branch>","branch":"<branch>","startFromOrigin":false}` and the brief in `message`. Pass `modelSelection: {instanceId, model, options:[{"id":"effort","value":"<level>"}]}`. Leave out `runtimeMode` and `interactionMode`, so the thread runs in your modes. Keep the returned `threadId`. Launch has no retry key, so after a lost response check `t3_thread_list` before you launch again. Invoking one of those playbooks is the user's request for separate threads.
   - A launched thread never wakes its launcher. Its brief says to report each milestone with `t3_thread_send` to the coordinator's thread id, and to stop when that call is refused. The coordinator also watches the owner's PR and keeps a heartbeat ([Waking](#waking)).
   - Outside T3 a long-lived owner is a background `Agent` in its own worktree.
 
@@ -119,7 +119,7 @@ Two writers never share a checkout (principle-separate-before-serializing-shared
 - **Wake** with `watch_pull_request` from a top-level thread. Subagents and delegated children cannot watch. It wakes on a newly failed check, all required checks passing, a new comment or review from someone else posted after the watch began, a conflict, a close, or repeated read failures. Handle existing comments first, since they will not wake you. Wakes queue behind an active turn. A wake does not name the head SHA, so read it.
 - **A merge does not wake you.** The watch ends silently. When you wait on a merge, also keep a `schedule_task` heartbeat (every 10 to 30 minutes) that checks the PR state, and delete it after.
 - Ten comment-only wakes in a row end the watch. Settling or archiving the thread ends it too. Call `unwatch_pull_request` before handing the thread back to the user.
-- **Judge** with the bundled watcher, run once: `../../../skills/poteto-mode/scripts/watch-pr/watch-pr --status-only` (bun). It reads the forge's verdict. A green check list is not a verdict.
+- **Read state** with the bundled watcher (bun): `scripts/watch-pr/watch-pr --status-only` under this file's skill directory prints one status table (checks, review state, `mergeStateStatus`, head SHA) and exits. **Judge** by running it once without `--status-only` when no check is pending. It returns the verdict at once. A green check list is not a verdict, and the watcher reports `READY` on a branch that is `BEHIND` its base, so read `mergeStateStatus` yourself.
 
 ## Questions
 
@@ -134,7 +134,7 @@ Use `TodoWrite`. When it is not available, keep the list in `.audit/<slug>.todo.
 ## History
 
 - **T3:** `t3_thread_list` (one project per call, `titleContains` for titles), `t3_thread_read` (any thread, paged, `view: "activity"` for tool calls), `t3_thread_search` (message text only, one hit per thread, at most 50, no titles). Reading a direct child's finished result acknowledges its wake.
-- **Claude transcripts:** `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<cwd with every / and . replaced by ->/<session>.jsonl`. T3 threads write them too. Skip records with `isMeta` and local-command records.
+- **Claude transcripts:** `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<dir>/<session>.jsonl`, where `<dir>` is the working directory with every character other than a letter or digit replaced by `-`. A `<dir>` longer than 200 characters is cut to 200 and gets a hash suffix, so for a long path list `projects/` and match the prefix. Subagent transcripts are `<dir>/<session>/subagents/agent-<id>.jsonl`. T3 threads write them too, with the thread's worktree as the working directory. Skip records with `isMeta` and local-command records.
 
 ## Proof surfaces
 

@@ -18,6 +18,8 @@ Other explorers are investigating different slices of the same subsystem in para
 
 ## Exploration Instructions
 
+This exploration is read-only. Do not edit files, commit, or push.
+
 Start by finding the relevant code. Use Glob to find directories and files, Grep to find key symbols, Read to understand the actual implementation. Don't guess from names. Read the code.
 
 Follow this pattern:

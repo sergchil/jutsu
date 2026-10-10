@@ -1,0 +1,21 @@
+### Feature
+
+**You own the design. Plan, review, verify.** Delegate implementation. Stay in the lead.
+
+1. `how` (`{{p3}}/skills/how/SKILL.md`) over the affected subsystem.
+2. `architect` (`{{p3}}/skills/architect/SKILL.md`) for parallel design exploration.
+3. Write the throughput checkpoint as four todo items. A dimension that genuinely does not apply (single file, no fan-out) keeps its item with `n/a: <reason>` rather than being dropped:
+   - **Blocking first steps.** Gates run before fan-out.
+   - **Independent workstreams.** Disjoint files, services, or layers parallelize. Shared writes serialize.
+   - **Shared mutable state.** Default to splitting the target (the **separate-before-serializing-shared-state** principle skill, `{{p3}}/principles/principle-separate-before-serializing-shared-state.md`). Serialize only for real invariants.
+   - **Smallest safe decomposition.** If one worker is best, name why.
+4. Delegate code-writing to a subagent using your configured feature model (the `feature, refactoring` role in [the runtime's Roles](../references/runtime.md#roles)) with a specific scope (file paths, named data shape and its organizing structure per **principle-model-the-domain** (`{{p3}}/principles/principle-model-the-domain.md`), a state machine over scattered booleans, a table/registry over branching, a typed model over repeated shape assumptions, chosen before the delegate writes logic, and success criteria). When the implementation admits multiple valid shapes (error handling, abstraction layer, test structure), delegate via the **arena** skill (`{{p3}}/skills/arena/SKILL.md`) instead so the runners surface the alternatives and the cross-judge guards the pick. Mandatory: no skip-with-reason escape, and Laziness Protocol does not override it (the gain is review separation, not lines saved). A subagent forbidden to spawn satisfies this by owning the diff directly with the same review separation. No "standing by" reply that waits on a nested agent. A delegate that writes while another writer may overlap gets its own worktree, created from your HEAD per [the runtime's Isolation](../references/runtime.md#isolation). Never use `Agent` `isolation: "worktree"` for it, since that branches from the remote default branch. Comments per **Comments**. Surgical edits, re-ground against the source for upstream-derived files. Port shared-primitive improvements to all consumers and verify each. Commit liberally.
+5. Verify on the matching surface. "Inconclusive" or wrong-surface is not a pass. Flag it.
+6. Rebase into small, ordered commits. Stack follow-ups.
+   Use the **sequence-verifiable-units** principle skill (`{{p3}}/principles/principle-sequence-verifiable-units.md`), building, verifying, and committing each small unit before the next.
+7. If the design is contested, `interrogate` (`{{p3}}/skills/interrogate/SKILL.md`) before shipping.
+8. Run **Opening a PR**.
+
+Code-coupled work (one feature, one migration) goes to a single owner with the checkpoint inline. That owner fans out internally after the blocking phase. Parent-level fan-out is for slices that produce independent artifacts (audits, cross-subsystem investigations, competing experiments). Rewrite the checkpoint at phase boundaries. Spawn a fresh owner rather than chaining interrupts. Stop the old owner first and confirm with `git status` that nothing still writes, since `completed` in the agent list means notified, not exited ([the runtime's Subagents](../references/runtime.md#subagents)).
+
+**Reply:** what you built, what you chose and why, the throughput checkpoint, open decisions. Tables for design alternatives.

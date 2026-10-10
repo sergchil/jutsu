@@ -1,0 +1,109 @@
+{
+  "substitutions": [
+    {
+      "id": "B5-1",
+      "pattern": "\\]\\(\\.\\./(principle-[a-z-]+)/SKILL\\.md\\)",
+      "replacement": "]({{p3}}/principles/\\1.md)",
+      "files": "^(principles/|skills/benchmark-checklist/SKILL\\.md$)",
+      "regex": true
+    },
+    {
+      "id": "B5-2",
+      "pattern": "\\]\\(\\.\\./((?!principle-)[a-z-]+)/SKILL\\.md\\)",
+      "replacement": "]({{p3}}/skills/\\1/SKILL.md)",
+      "files": "^principles/",
+      "regex": true
+    },
+    {
+      "id": "B5-3",
+      "pattern": "the \\*\\*([a-z-]+)\\*\\* principle skill\\b",
+      "replacement": "the **\\1** principle (`{{p3}}/principles/principle-\\1.md`)",
+      "files": "^principles/",
+      "regex": true
+    },
+    {
+      "id": "B5-4",
+      "pattern": "(the **show-me-your-work** skill)",
+      "replacement": "(the **show-me-your-work** skill at `{{p3}}/skills/show-me-your-work/SKILL.md`)",
+      "files": "^principles/principle-prove-it-works\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-5",
+      "pattern": "Companion to `how` and `why`.",
+      "replacement": "Companion to `how` (`{{p3}}/skills/how/SKILL.md`) and `why` (`{{p3}}/skills/why/SKILL.md`).",
+      "files": "^skills/blast-radius/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-6",
+      "pattern": "run it as an `arena`.",
+      "replacement": "run it as an `arena` (`{{p3}}/skills/arena/SKILL.md`).",
+      "files": "^skills/blast-radius/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-7",
+      "pattern": "Write it through `unslop`,",
+      "replacement": "Write it through `unslop` (`{{p3}}/skills/unslop/SKILL.md`),",
+      "files": "^skills/blast-radius/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-8",
+      "pattern": "Apply the **type-system-discipline** principle skill first.",
+      "replacement": "Apply the **type-system-discipline** principle (`{{p3}}/principles/principle-type-system-discipline.md`) first.",
+      "files": "^skills/typescript-best-practices/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-9",
+      "pattern": "See the **boundary-discipline** principle skill.",
+      "replacement": "See the **boundary-discipline** principle (`{{p3}}/principles/principle-boundary-discipline.md`).",
+      "files": "^skills/typescript-best-practices/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-10",
+      "pattern": "See the **type-system-discipline** and **boundary-discipline** principle skills.",
+      "replacement": "See the **type-system-discipline** and **boundary-discipline** principles (`{{p3}}/principles/principle-type-system-discipline.md`, `{{p3}}/principles/principle-boundary-discipline.md`).",
+      "files": "^skills/typescript-best-practices/references/patterns\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-11",
+      "pattern": "as an addition to `unslop`'s abstract-metaphor rule in your reply",
+      "replacement": "as an addition to `unslop`'s abstract-metaphor rule (`{{p3}}/skills/unslop/SKILL.md`) in your reply",
+      "files": "^skills/technical-writing/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-12",
+      "pattern": "per the **Opening a PR** playbook.",
+      "replacement": "per the **Opening a PR** playbook (`{{p3}}/skills/poteto-mode/playbooks/opening-a-pr.md`).",
+      "files": "^skills/benchmark-checklist/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-13",
+      "pattern": "- The **Perf issue** playbook finds",
+      "replacement": "- The **Perf issue** playbook (`{{p3}}/skills/poteto-mode/playbooks/perf-issue.md`) finds",
+      "files": "^skills/benchmark-checklist/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-14",
+      "pattern": "- The **Hillclimb** playbook loops",
+      "replacement": "- The **Hillclimb** playbook (`{{p3}}/skills/poteto-mode/playbooks/hillclimb.md`) loops",
+      "files": "^skills/benchmark-checklist/SKILL\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B5-15",
+      "pattern": "See the **boundary-discipline** principle skill.",
+      "replacement": "See the **boundary-discipline** principle.",
+      "files": "^skills/typescript-best-practices/references/patterns\\.md$",
+      "regex": false
+    }
+  ]
+}

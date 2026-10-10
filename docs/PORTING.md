@@ -47,7 +47,7 @@ Each one comes from a real run of a port, or from T3's source. Put each where it
 17. `t3_thread_interrupt` does not stop async children. `task_cancel` does.
 18. An unbound `schedule_task` run starts from `main` at origin. Bind runs to the coordinator.
 19. `AskUserQuestion` options need non-empty descriptions.
-20. Claude transcripts live under `$CLAUDE_CONFIG_DIR/projects/<cwd with / and . replaced by ->/`. Skip `isMeta` and local-command records.
+20. Claude transcripts live under `$CLAUDE_CONFIG_DIR/projects/<dir>/`, where `<dir>` is the working directory with every character other than a letter or digit replaced by `-` (cut to 200 characters plus a hash when longer). Link the runtime's History section instead of restating the rule. Skip `isMeta` and local-command records.
 21. The todo fallback is `.audit/<slug>.todo.md`, one file per session slug, so parallel sessions do not collide.
 22. Babysit reports a behind-base gate instead of resolving it, and confirms its first status read is the PR it was asked about.
 

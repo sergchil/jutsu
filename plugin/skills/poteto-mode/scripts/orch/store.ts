@@ -165,9 +165,12 @@ export interface ResolveGateParams {
   readonly answer: string;
 }
 
+export type FrontierSource = "gt" | "gh";
+
 export interface SetFrontierParams {
   readonly repo: string;
   readonly prs?: readonly number[];
+  readonly source?: FrontierSource;
 }
 
 export interface AddStandingParams {
@@ -1165,6 +1168,105 @@ function resolveFrontier(repo: string): readonly FrontierPr[] {
   }));
 }
 
+interface GhPullRequest {
+  readonly pr: number;
+  readonly state: FrontierPrState;
+  readonly head: string;
+  readonly base: string;
+  readonly sha: string;
+}
+
+function githubPullRequest({
+  pr,
+  repo,
+}: {
+  pr: number;
+  repo: string;
+}): GhPullRequest {
+  let raw: string;
+  try {
+    raw = execFileSync(
+      "gh",
+      [
+        "pr",
+        "view",
+        String(pr),
+        "--json",
+        "number,state,headRefName,baseRefName,headRefOid",
+      ],
+      {
+        cwd: repo,
+        encoding: "utf8",
+        env: process.env,
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+  } catch (error) {
+    throw new UserError(`gh pr view ${pr} failed: ${errorMessage(error)}`);
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new UserError(`gh pr view ${pr} did not return JSON`);
+  }
+  const state = isRecord(value) ? frontierPrStateOrNull(value.state) : null;
+  if (
+    !isRecord(value) ||
+    value.number !== pr ||
+    state === null ||
+    typeof value.headRefName !== "string" ||
+    typeof value.baseRefName !== "string" ||
+    typeof value.headRefOid !== "string" ||
+    !/^[0-9a-f]{40,64}$/i.test(value.headRefOid)
+  ) {
+    throw new UserError(`gh pr view ${pr} returned an invalid PR`);
+  }
+  return {
+    pr,
+    state,
+    head: value.headRefName,
+    base: value.baseRefName,
+    sha: value.headRefOid,
+  };
+}
+
+// GitHub knows no stack, so the pinned order is the stack. Base refs drift
+// mid-restack, so an open PR that does not base on the open PR below it is
+// an error rather than a guess.
+function githubFrontier({
+  prs,
+  repo,
+}: {
+  prs: readonly number[];
+  repo: string;
+}): readonly FrontierPr[] {
+  const rows = prs.map((pr) => githubPullRequest({ pr, repo }));
+  const drift: string[] = [];
+  for (const [index, row] of rows.entries()) {
+    const below = rows[index - 1];
+    if (
+      below !== undefined &&
+      below.state === "OPEN" &&
+      row.state === "OPEN" &&
+      row.base !== below.head
+    ) {
+      drift.push(
+        `#${row.pr} bases on ${row.base}, not on #${below.pr} (${below.head})`
+      );
+    }
+  }
+  if (drift.length > 0) {
+    throw new UserError(`frontier chain mismatch: ${drift.join("; ")}`);
+  }
+  return rows.map((row) => ({
+    pr: row.pr,
+    branches: row.head,
+    sha: row.sha,
+    state: row.state,
+  }));
+}
+
 function validateFrontierPin({
   actual,
   expected,
@@ -1492,12 +1594,22 @@ export function openStore(
           throw new UserError("--prs must not contain duplicates");
         }
         const old = await readFrontier(store);
-        const prs = resolveFrontier(repo);
-        if (pin !== undefined) {
-          validateFrontierPin({
-            actual: prs.map((row) => row.pr),
-            expected: pin,
-          });
+        let prs: readonly FrontierPr[];
+        if (params.source === "gh") {
+          if (pin === undefined) {
+            throw new UsageError(
+              "--source gh needs --prs <n,...> in stack order, bottom first"
+            );
+          }
+          prs = githubFrontier({ prs: pin, repo });
+        } else {
+          prs = resolveFrontier(repo);
+          if (pin !== undefined) {
+            validateFrontierPin({
+              actual: prs.map((row) => row.pr),
+              expected: pin,
+            });
+          }
         }
         const value: Frontier = {
           generation: old.generation + 1,

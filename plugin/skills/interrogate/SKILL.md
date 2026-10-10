@@ -33,19 +33,17 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the Task tool. Use the `interrogate reviewers` line in `~/.cursor/rules/pstack-models.mdc`, one reviewer per entry, extending or shrinking the Reviewer A/B labels below to the configured entry count. If the rule or that line is missing, use the table defaults.
-
-| Subagent | Default model |
-|----------|---------------|
-| Reviewer A | `claude-opus-5-5-xhigh` |
-| Reviewer B | `grok-4.7-xhigh-fast` |
+Launch all reviewers in a single message using the `Agent` tool. Use the `interrogate reviewers` line in `p3-models.md`, one reviewer per entry, extending or shrinking the Reviewer A/B/C labels to the configured entry count. If the file or that line is missing, use the line's defaults in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles), Reviewer A on the first.
 
 For each reviewer:
-- `subagent_type`: `generalPurpose`
-- `model`: the configured `interrogate reviewers` entry, or the table default with no configured line. For an `auto` or `inherit-parent` entry, omit `model` so that reviewer runs on the parent model.
-- `readonly`: `true`
+- `subagent_type`: `general-purpose`
+- `model` and `effort`: the configured `interrogate reviewers` entry, or the default with no configured line. For an `inherit` entry, omit `model` so that reviewer runs on the parent model.
+- `effort` never below `high`. Pass `high` for an entry that names a lower effort or none, `inherit` included.
+- a read-only brief, which the reviewer prompt carries
 
-If the Task tool rejects a configured entry, run that reviewer on the table default of its family and say so. Families go by prefix: `claude-*` and `grok-*`. With no family match, use Reviewer A's default. If it rejects a table default, check the valid slugs in the Task tool's error message, pick the closest equivalent (prefer the same family and reasoning tier), spawn with it, and open a separate PR to update the default table. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply either fallback to it.
+If the `Agent` tool rejects a configured entry, run that reviewer on a default and say so. Do not block the review on it. An entry that names a T3 target runs that reviewer through `delegate_task` per [the runtime's Subagents](../../skills/poteto-mode/references/runtime.md#subagents). Pass `options` with `effort` on every call and a distinct `clientRequestId` per reviewer and per round, and read each result with `task_status` after the wake.
+
+Record the provider, model, and effort each reviewer actually ran at, not the ones you asked for. A `delegate_task` reviewer's `task_status` names its provider and model, and `t3_thread_configuration` on its `childThreadId` names its effort. An `Agent` reviewer runs at the `model` and `effort` you passed, unless its model does not offer that effort and falls back to its default.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent
@@ -56,6 +54,8 @@ Read `references/reviewer-prompt.md` and fill in the template with:
 The same filled template goes to all reviewers, so every model applies the code-quality lens.
 
 ## Step 4, Synthesize
+
+If no independent reviewer could run, the review gate stays closed. Report `BLOCKED: independent review` and say which reviewers ran.
 
 As results come back, build a unified picture:
 
@@ -91,7 +91,7 @@ Present the verdict in this structure:
 > [The stated intent paragraph from Step 2]
 
 ### Reviewers
-- Reviewer [label]: [model name], [N findings] (one bullet per reviewer)
+- Reviewer [label]: [provider, model, and effort it ran at], [N findings] (one bullet per reviewer)
 
 ### Act On
 [Findings that should be addressed. For each: description, which models raised it, why it matters.]
@@ -106,4 +106,4 @@ Present the verdict in this structure:
 [Rejected findings with brief rationale.]
 
 ### Agreement Map
-[Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
+[Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us? When every reviewer is a Claude model, say that the agreement is same-vendor, per the Model diversity note in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles).]

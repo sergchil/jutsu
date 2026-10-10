@@ -1,0 +1,53 @@
+{
+  "substitutions": [
+    {
+      "id": "B4-1",
+      "pattern": "Start by finding the relevant code. Use Glob",
+      "replacement": "This exploration is read-only. Do not edit files, commit, or push.\n\nStart by finding the relevant code. Use Glob",
+      "files": "^skills/how/references/explorer-prompt\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B4-2",
+      "pattern": "You have read-only access to the codebase to check anything, clarify a detail, or fill a gap.",
+      "replacement": "You have read-only access to the codebase to check anything, clarify a detail, or fill a gap. Do not edit files, commit, or push.",
+      "files": "^skills/how/references/explainer-prompt\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B4-3",
+      "pattern": "You are here to stress-test.",
+      "replacement": "You are here to stress-test. This review is read-only. Do not edit files, commit, or push.",
+      "files": "^skills/interrogate/references/reviewer-prompt\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B4-4",
+      "pattern": "- `Read` tool calls against any `SKILL.md` file (workspace `.cursor/skills/`, user-level `~/.cursor/skills/`, or plugin-installed paths under `~/.cursor/plugins/`)\n- `Task` prompts that name a skill path\n- Tool calls (Shell, Grep, MCP, etc.) that match a skill's documented commands",
+      "replacement": "- `Skill` tool calls, and user turns that invoke a skill as `/<name>`\n- `Read` tool calls against any `SKILL.md` file (project `.claude/skills/`, user-level `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/`, or plugin-installed paths under `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/`), or against any file in the p3 plugin directory, whose skills, playbooks, and principles load by path\n- `Agent` prompts that name a skill path\n- Tool calls (Bash, Grep, MCP, etc.) that match a skill's documented commands",
+      "files": "^skills/reflect/references/(judgment|tooling|divergent)-reviewer\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B4-5",
+      "pattern": "new skill via create-skill",
+      "replacement": "new skill via authoring-a-skill",
+      "files": "^skills/reflect/references/synthesizer\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B4-6",
+      "pattern": "[PR #123](url)",
+      "replacement": "[PR #123](https://github.com/<owner>/<repo>/pull/123)",
+      "files": "^skills/why/references/synthesizer-prompt\\.md$",
+      "regex": false
+    },
+    {
+      "id": "B4-7",
+      "pattern": "It may require `mcp_auth`. If authentication fails, stop and report the gap.",
+      "replacement": "It may need the user to authenticate it with `/mcp`. If authentication fails, stop and report the gap.",
+      "files": "^skills/why/references/sources/slack\\.md$",
+      "regex": false
+    }
+  ]
+}
