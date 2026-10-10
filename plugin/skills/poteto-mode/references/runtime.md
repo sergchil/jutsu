@@ -22,7 +22,7 @@ Playbooks keep upstream's words. Read them this way.
 | model slug per role | `model` and `effort` on `Agent`, from [Roles](#roles). |
 | cloud agent, own VM | A worktree. See [Isolation](#isolation). In T3 a long-lived owner is a launched thread. |
 | `AskQuestion` | `AskUserQuestion`. See [Questions](#questions). |
-| todolist | `TodoWrite`. See [Todo list](#todo-list). |
+| todolist | The task tools when present, else a file. See [Todo list](#todo-list). |
 | `/loop`, an hourly tick, a wake | See [Waking](#waking). |
 | `scripts/watch-pr` polling | `watch_pull_request` to wake, `watch-pr --status-only` to judge. See [Pull requests](#pull-requests). |
 | transcripts, `agent-transcripts/` | See [History](#history). |
@@ -34,7 +34,7 @@ Playbooks keep upstream's words. Read them this way.
 
 ## Subagents
 
-**Default: the native `Agent` tool.** T3's own system prompt says to prefer native subagents for same-provider work when they support the model. Every Claude model and effort level is reachable natively, so a Claude child is an `Agent` call. T3 shows each one as a child thread.
+**Default: the native `Agent` tool.** Some tool lists still show it under its old name, `Task`. T3's own system prompt says to prefer native subagents for same-provider work when they support the model. Every Claude model and effort level is reachable natively, so a Claude child is an `Agent` call. T3 shows each one as a child thread.
 
 - `subagent_type`: `p3:poteto-agent` for every child inside a playbook step. Routed skills name their own type, usually `general-purpose` or `Explore`. Keep what the skill names.
 - `model`: an alias only: `opus`, `sonnet`, `fable`, or `haiku`. The tool rejects full model ids.
@@ -42,9 +42,9 @@ Playbooks keep upstream's words. Read them this way.
 - `run_in_background`: true unless you need the result before your next step.
 - `name`: set it for any child you may message or stop. `SendMessage` continues a live child.
 - **Brief.** A child gets only its brief. Open every `p3:poteto-agent` brief with the absolute path of the router (`skills/poteto-mode/SKILL.md`, which you know because you read it) and the line `Read it in full before any work.` Then the goal, file pointers instead of pasted context, constraints, and the report format. Never put `$(...)` or backticks that a shell would expand into a brief that a child will paste into a command.
-- **Stop what you abandon.** In the agent list `completed` means the completion was notified, not that the process exited. A child with live background work reports completed and keeps writing. Stop it with the stop tool (it may be deferred, so load it first) and confirm with `git status` before you give its work to a fresh child.
+- **Stop what you abandon.** In the agent list `completed` means the completion was notified, not that the process exited. A child with live background work reports completed and keeps writing. Stop it with `TaskStop` (it may be deferred, so load it with `ToolSearch` first) and confirm with `git status` before you give its work to a fresh child.
 - **Drain before landing.** Before a commit, merge, push, or deploy from a worktree, every child that writes there has stopped.
-- **Background children** cannot ask the user questions and cannot call `delegate_task` after your turn ends. Keep work that needs either in the foreground.
+- **No subagent** has `AskUserQuestion` or `ScheduleWakeup`, so questions and `/loop` stay in this thread. Background children also cannot call `delegate_task` after your turn ends.
 
 **When to use `delegate_task` instead (T3 only).**
 
@@ -60,29 +60,31 @@ Rules for `delegate_task`:
 - A child's runtime and interaction modes must be equal to or narrower than yours. A broader request fails. It is never clamped.
 - `task_cancel` stops a child and its children. `t3_thread_interrupt` does not.
 - Children share your checkout. See [Isolation](#isolation).
-- Children cannot call `watch_pull_request`.
+- Children never call `watch_pull_request`. T3 refuses a delegated child's watch, and a native subagent's watch lands on your thread.
 
 ## Roles
 
 Role defaults. A role line in `p3-models.md` overrides one. Look for `.claude/p3-models.md` in the repo, then `p3-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). `/p3:setup-pstack` writes it.
 
-- feature, refactoring: `opus @high`
-- bug-fix: `fable @high`
-- perf-issue: `fable @high`
-- hillclimb: `fable @high`
+- feature, refactoring: `opus @xhigh`
+- bug-fix: `fable @xhigh`
+- perf-issue: `fable @xhigh`
+- hillclimb: `fable @xhigh`
 - judgment and prose: `opus @xhigh`
-- hardest tasks: `fable @xhigh`
-- how explorer: `sonnet @high`
+- hardest tasks: `opus @xhigh`
+- how explorer: `sonnet @xhigh`
 - how explainer: `opus @xhigh`
-- why investigators: `sonnet @high`
+- why investigators: `sonnet @xhigh`
 - why synthesizer: `opus @xhigh`
-- reflect tooling: `opus @high`
+- reflect tooling: `sonnet @xhigh`
 - reflect judgment, divergent, synthesizer: `opus @xhigh`
-- swarm workers: `opus @high`
-- arena runners: `opus @xhigh`, `fable @high`, `sonnet @xhigh`
-- arena cross-judge pool: `opus @xhigh`, `fable @high`, `sonnet @xhigh`
-- architect runners: `opus @xhigh`, `fable @high`, `sonnet @xhigh`
-- interrogate reviewers: `opus @xhigh`, `fable @high`, `sonnet @xhigh`
+- swarm workers: `opus @xhigh`
+- arena runners: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
+- arena cross-judge pool: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
+- architect runners: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
+- interrogate reviewers: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
+
+Upstream runs every role at its model's highest reasoning setting, and so do these defaults. `/p3:setup-pstack` lowers them for a smaller budget.
 
 A value is `<alias> @<effort>`, `inherit` (omit `model` and `effort`), or `t3:<providerInstanceId>/<modelId> @<effort>` for a `delegate_task` target. A value without `@` uses the session effort. An effort a model does not offer falls back to its default, so report the effort the child ran at, not the one you asked for.
 
@@ -95,8 +97,8 @@ Two writers never share a checkout (principle-separate-before-serializing-shared
 - Read-only children share your checkout.
 - **A child that writes while another writer may overlap** gets its own worktree, created by you before you spawn it, from your current HEAD: `git worktree add <path> -b <branch> HEAD`. Commit first, because uncommitted changes do not reach it. The brief says: work only under the absolute path, prefix every command with `cd <path> &&`, report the branch and head SHA. Check that the diff landed there before you integrate. Remove the worktree after.
 - Do not use `Agent` `isolation: "worktree"` for stacked or branch-based work. It branches from the remote default branch unless the user set `worktree.baseRef: "head"`.
-- **A long-lived owner** (a PR owner in Autopilot or Orchestrate) in T3 is a launched thread: `t3_thread_launch` with `workspaceStrategy: {"type":"worktree","baseRef":"<parent branch>","branch":"<branch>","startFromOrigin":false}` and the brief in `message`. Pass `modelSelection: {instanceId, model, options:[{"id":"effort","value":"<level>"}]}`. Leave out `runtimeMode` and `interactionMode`, so the thread runs in your modes. Keep the returned `threadId`. Launch has no retry key, so after a lost response check `t3_thread_list` before you launch again. Invoking one of those playbooks is the user's request for separate threads.
-  - A launched thread never wakes its launcher. Its brief says to report each milestone with `t3_thread_send` to the coordinator's thread id, and to stop when that call is refused. The coordinator also watches the owner's PR and keeps a heartbeat ([Waking](#waking)).
+- **A long-lived owner** (a PR owner in Autopilot or Orchestrate) in T3 is a launched thread: `t3_thread_launch` with `workspaceStrategy: {"type":"worktree","baseRef":"<parent branch>","branch":"<branch>","startFromOrigin":false}` and the brief in `message`. Open the brief with the router's absolute path and the line `Read it in full before any work.`, since a launched thread is a new session where poteto mode is off. Pass `modelSelection: {instanceId, model, options:[{"id":"effort","value":"<level>"}]}`. Leave out `runtimeMode` and `interactionMode`, so the thread runs in your modes. Keep the returned `threadId`. Launch has no retry key, so after a lost response check `t3_thread_list` before you launch again. Invoking one of those playbooks is the user's request for separate threads.
+  - A launched thread never wakes its launcher. Its brief says to report each milestone with `t3_thread_send` and `mode: "queue"` to the coordinator's thread id (the default `auto` steers an active turn, which interrupts Claude's running tools), and to stop when that call is refused. The coordinator also watches the owner's PR and keeps a heartbeat ([Waking](#waking)).
   - Outside T3 a long-lived owner is a background `Agent` in its own worktree.
 
 ## Waking
@@ -116,20 +118,21 @@ Two writers never share a checkout (principle-separate-before-serializing-shared
 ## Pull requests
 
 - Open with `gh`. After opening or adopting a PR, register it on the thread with `link_pull_request` (T3), one call per stack layer.
-- **Wake** with `watch_pull_request` from a top-level thread. Subagents and delegated children cannot watch. It wakes on a newly failed check, all required checks passing, a new comment or review from someone else posted after the watch began, a conflict, a close, or repeated read failures. Handle existing comments first, since they will not wake you. Wakes queue behind an active turn. A wake does not name the head SHA, so read it.
+- **Wake** with `watch_pull_request` from a top-level thread, never from a child ([Subagents](#subagents)). It wakes on a newly failed check, all required checks passing, a new comment or review from someone else posted after the watch began, a conflict, a close, or repeated read failures. Handle existing comments first, since they will not wake you. Wakes queue behind an active turn. A wake does not name the head SHA, so read it.
 - **A merge does not wake you.** The watch ends silently. When you wait on a merge, also keep a `schedule_task` heartbeat (every 10 to 30 minutes) that checks the PR state, and delete it after.
-- Ten comment-only wakes in a row end the watch. Settling or archiving the thread ends it too. Call `unwatch_pull_request` before handing the thread back to the user.
+- Ten comment-only wakes in a row end the watch. Settling or archiving the thread, or the user pressing Stop, ends it too. Unsettle a settled thread (`t3_thread_update`) before a new watch. Call `unwatch_pull_request` before handing the thread back to the user.
 - **Read state** with the bundled watcher (bun): `scripts/watch-pr/watch-pr --status-only` under this file's skill directory prints one status table (checks, review state, `mergeStateStatus`, head SHA) and exits. **Judge** by running it once without `--status-only` when no check is pending. It returns the verdict at once. A green check list is not a verdict, and the watcher reports `READY` on a branch that is `BEHIND` its base, so read `mergeStateStatus` yourself.
 
 ## Questions
 
 - `AskUserQuestion` renders as a T3 question card. Give every option a non-empty description. A blank one can stall the thread.
 - T3's `auto` and `full-access` runtime modes approve tool calls without asking. Permission prompts do not guard the Always-pause list in poteto-mode's Autonomy section. You do. Ask before each item on it.
-- T3 denies `ExitPlanMode` and keeps the plan. In plan mode, write the plan as your reply and stop.
+- In plan mode, call `ExitPlanMode` with the plan. T3 shows it as a plan card, denies the call, and you stop. The user approves and sends the next message.
+- When `AskUserQuestion` is not in your tools, ask in plain text and end the turn.
 
 ## Todo list
 
-Use `TodoWrite`. When it is not available, keep the list in `.audit/<slug>.todo.md` in the working tree, one line per item, and update it at each step.
+Claude Code offers no todo tools on current models (Opus 4.8 and later, Sonnet 5, Fable 5) unless the user sets `CLAUDE_CODE_ENABLE_TODO_TOOLS=1`. When `TaskCreate` and `TaskUpdate` (or `TodoWrite`) are in your tools, use them. Otherwise keep the list in `.audit/<slug>.todo.md` in the working tree, where `<slug>` is a short kebab-case name for the task. One line per item, `- [ ]` or `- [x]`, updated at each step. Keep `.audit/` out of git as [Store](#store) says.
 
 ## History
 
@@ -147,7 +150,7 @@ Use `TodoWrite`. When it is not available, keep the list in `.audit/<slug>.todo.
 
 ## Store
 
-Durable files for a program (Orchestrate's tables, decision logs, resume notes) go under `.p3/<slug>/` at the repo root. Add `.p3/` to `.git/info/exclude` the first time. Worktree threads see only committed files, so pass a coordinator's store path as an absolute path.
+Durable files for a program (Orchestrate's tables, decision logs, resume notes) go under `.p3/<slug>/` at the repo root. The first time, append `.p3/` and `.audit/` to the file that `git rev-parse --git-path info/exclude` prints. In a worktree `.git` is a file, so never write `.git/info/exclude` by hand. Worktree threads see only committed files, so pass a coordinator's store path as an absolute path.
 
 ## Missing companions
 

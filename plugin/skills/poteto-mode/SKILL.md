@@ -25,10 +25,10 @@ Remaining triggers:
 - Parallel fan-out → the **swarm** skill for coverage matrices, races, gauntlets, and exploration partitions. Use **arena** for design or code bakeoffs with base selection and grafting.
 - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
-- Any prose surface → the **unslop** skill. Your reply is a prose surface. Write it per **Writing the reply**. Agent-facing prose also follows the Authoring a skill playbook (`playbooks/authoring-a-skill.md`).
-- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`).
+- Any prose surface → the **unslop** skill. Your reply is a prose surface. Write it per **Writing the reply**. Agent-facing prose (skills, briefs, prompts) also follows step 1 of the Authoring a skill playbook (`playbooks/authoring-a-skill.md`).
+- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/p3:technical-writing`).
 - Before commit → deslop the diff per [the runtime's Missing companions](references/runtime.md#missing-companions).
-- Before review → the **no-comments** skill (`/no-comments`).
+- Before review → the **no-comments** skill (`/p3:no-comments`).
 - Shipping UI / IDE / CLI → drive the real surface per [the runtime's Proof surfaces](references/runtime.md#proof-surfaces): T3's `preview_*` tools for browser and web UIs, `device_*` for simulators, the terminal for CLIs and TUIs. For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
 - Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → the **benchmark-checklist** skill before you report or act on the number.
 - Any PR-status request → the **Babysit** playbook (`playbooks/babysit.md`), and not Claude Code's `/autofix-pr` or T3's own PR watching, which match the same words. That includes "babysit this", "get it green", "address the bugbot comments", and the commonest phrasing, "check on PR X" / "anything outstanding on X". Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
@@ -120,7 +120,7 @@ Comments follow the same rule as the reply. Write them clean as you go. Keep a c
 
 ## Playbooks
 
-Open a todolist (`TodoWrite`, or the fallback in [the runtime's Todo list](references/runtime.md#todo-list)) whose first items are the matched playbook's steps, copied in verbatim, before any task-specific todos. A step you choose not to do stays in the list with a one-line `skip: <reason>`. Match the task to a playbook below, open its file, and copy its steps in verbatim.
+Open a todolist (the task tools when present, else the fallback in [the runtime's Todo list](references/runtime.md#todo-list)) whose first items are the matched playbook's steps, copied in verbatim, before any task-specific todos. A step you choose not to do stays in the list with a one-line `skip: <reason>`. Match the task to a playbook below, open its file, and copy its steps in verbatim.
 
 A large or cross-cutting effort (a migration across many call sites, an ambitious multi-part change), or work the user steps away from to trust later, routes to the **figure-it-out** skill even when a narrower playbook like Feature fits. Use **figure-it-out** whenever no bundled playbook fits. It designs a bespoke, rigorous playbook for the task. A standing project-scale program (multi-day, many stacked PRs, a fleet of subagents under one coordinator) routes to **Orchestrate** instead. figure-it-out designs one bespoke run, orchestrate runs the program.
 

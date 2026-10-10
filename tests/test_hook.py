@@ -79,11 +79,12 @@ class ModeHookTest(unittest.TestCase):
         self.expand(args="off", agent_id="a1")
         self.assertEqual(self.state_files(), [SESSION])
 
-    def test_resume_and_compact_repoint_the_router(self):
+    def test_compact_rereads_the_router_and_resume_only_reminds(self):
         self.expand()
-        for source in ("resume", "compact"):
-            r = self.run_hook("start", {"session_id": SESSION, "source": source})
-            self.assertIn("Reread /opt/p3/skills/poteto-mode/SKILL.md in full", r.stdout)
+        r = self.run_hook("start", {"session_id": SESSION, "source": "compact"})
+        self.assertIn("Reread /opt/p3/skills/poteto-mode/SKILL.md in full", r.stdout)
+        r = self.run_hook("start", {"session_id": SESSION, "source": "resume"})
+        self.assertEqual(r.stdout.strip(), "p3 poteto mode is on in this session (router: /opt/p3/skills/poteto-mode/SKILL.md).")
         r = self.run_hook("start", {"session_id": SESSION, "source": "startup"})
         self.assertEqual(r.stdout, "")
 

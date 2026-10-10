@@ -11,9 +11,10 @@ else in the config dir is written: no settings.json edits, no marketplace record
     ./install.sh --dry-run ...   print the actions only
 
 Config dirs come from T3's provider settings, resolved the way T3 resolves them
-(apps/server/src/provider/Drivers/ClaudeHome.ts): an instance's homePath, else
-CLAUDE_CONFIG_DIR from the instance's environment, else the inherited
-CLAUDE_CONFIG_DIR, else ~/.claude. Python 3.9+, stdlib only.
+(apps/server/src/provider/Drivers/ClaudeHome.ts): an enabled instance's homePath, else
+CLAUDE_CONFIG_DIR from the instance's environment, else ~/.claude. A CLAUDE_CONFIG_DIR
+exported in this shell is linked too, for plain `claude` and for T3 started from the
+shell. Disabled instances are skipped. Python 3.9+, stdlib only.
 """
 from __future__ import annotations
 
@@ -45,9 +46,13 @@ def expand_home(value: str) -> str:
     return value
 
 
-def default_config_dir(env: dict) -> Path:
-    inherited = (env.get("CLAUDE_CONFIG_DIR") or "").strip()
-    return Path(inherited).resolve() if inherited else (Path.home() / ".claude").resolve()
+def home_config_dir() -> Path:
+    return (Path.home() / ".claude").resolve()
+
+
+def shell_config_dir(env: dict) -> Path | None:
+    value = (env.get("CLAUDE_CONFIG_DIR") or "").strip()
+    return Path(expand_home(value)).resolve() if value else None
 
 
 def t3_settings_path(explicit: str | None) -> Path:
@@ -57,19 +62,40 @@ def t3_settings_path(explicit: str | None) -> Path:
     return Path(home).expanduser() / "userdata" / "settings.json"
 
 
-def claude_config_dirs(settings_path: Path, env: dict) -> list[tuple[Path, str]]:
-    """(config dir, why) for every Claude instance T3 knows, plus the default instance."""
-    found: dict[Path, str] = {default_config_dir(env): "default Claude instance (claudeAgent)"}
+def instance_enabled(instance: dict, config: dict) -> bool:
+    """T3's rule (contracts/settings.ts resolveProviderInstanceEnabled): an explicit false on either flag wins."""
+    return instance.get("enabled") is not False and config.get("enabled") is not False
+
+
+def claude_config_dirs(settings_path: Path, env: dict) -> tuple[list[tuple[Path, str]], list[str]]:
+    """(config dir, why) for every Claude config dir T3 or plain `claude` uses, and the skipped instances.
+
+    The T3 desktop app does not pass a shell-exported CLAUDE_CONFIG_DIR to providers
+    (apps/desktop/src/shell/DesktopShellEnvironment.ts), so an instance with no homePath
+    and no instance-level CLAUDE_CONFIG_DIR uses ~/.claude there. `claude` in a shell, and
+    T3 started from that shell, use the shell's value instead. Both get the link.
+    """
+    found: dict[Path, str] = {home_config_dir(): "default Claude instance in the T3 app"}
+    shell = shell_config_dir(env)
+    if shell is not None:
+        found.setdefault(shell, "CLAUDE_CONFIG_DIR of this shell (plain claude, or T3 started from this shell)")
+    skipped: list[str] = []
     try:
         settings = json.loads(settings_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return list(found.items())
-    for instance_id, instance in (settings.get("providerInstances") or {}).items():
+        return list(found.items()), skipped
+    instances = settings.get("providerInstances") or {}
+    if not isinstance(instances, dict):
+        return list(found.items()), skipped
+    for instance_id, instance in instances.items():
         if not isinstance(instance, dict) or instance.get("driver") != CLAUDE_DRIVER:
             continue
         config = instance.get("config") or {}
         if not isinstance(config, dict):
             config = {}
+        if not instance_enabled(instance, config):
+            skipped.append(str(instance_id))
+            continue
         home_path = str(config.get("homePath") or "").strip()
         instance_env = {
             str(item.get("name")): str(item.get("value") or "")
@@ -81,9 +107,9 @@ def claude_config_dirs(settings_path: Path, env: dict) -> list[tuple[Path, str]]
         elif instance_env.get("CLAUDE_CONFIG_DIR", "").strip():
             path = Path(instance_env["CLAUDE_CONFIG_DIR"].strip()).resolve()
         else:
-            path = default_config_dir(env)
+            path = home_config_dir()
         found.setdefault(path, f"T3 instance {instance_id}")
-    return list(found.items())
+    return list(found.items()), skipped
 
 
 def is_our_plugin(path: Path) -> bool:
@@ -100,7 +126,9 @@ def link_state(link: Path) -> str:
         target = target if target.is_absolute() else (link.parent / target)
         if target.resolve() == PLUGIN.resolve():
             return "ours"
-        dangling_checkout = not target.exists() and target.name == "plugin"
+        # A broken link counts as ours only when it points at <a p3-stack checkout>/plugin.
+        dangling_checkout = (not target.exists() and target.name == "plugin"
+                             and target.parent.name == REPO.name)
         return "stale-ours" if (is_our_plugin(target) or dangling_checkout) else "foreign-link"
     if link.exists():
         return "foreign"
@@ -148,7 +176,9 @@ def main() -> int:
         print(f"error: {PLUGIN} is missing. Run python3 tools/build.py first.", file=sys.stderr)
         return 1
 
-    targets = claude_config_dirs(t3_settings_path(args.t3_settings), dict(os.environ))
+    targets, skipped = claude_config_dirs(t3_settings_path(args.t3_settings), dict(os.environ))
+    for instance_id in skipped:
+        print(f"skip: T3 instance {instance_id} is disabled. Rerun after you enable it.")
     for extra in args.config_dir:
         targets.append((Path(expand_home(extra)).resolve(), "--config-dir"))
     seen: set[Path] = set()

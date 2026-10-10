@@ -81,5 +81,24 @@ class CheckerTest(unittest.TestCase):
                 self.assertIn(needle, text)
 
 
+class RoleTableTest(unittest.TestCase):
+    """setup-pstack's example table must equal the runtime's Roles defaults."""
+
+    def test_setup_example_matches_runtime_defaults(self):
+        import re
+        runtime = (ROOT / "port/added/skills/poteto-mode/references/runtime.md").read_text()
+        section = runtime.split("## Roles", 1)[1].split("\n## ", 1)[0]
+        defaults = {}
+        for line in section.splitlines():
+            m = re.match(r"- ([a-z ,-]+): (`.+`)$", line)
+            if m:
+                defaults[m.group(1)] = ", ".join(v.strip("`") for v in m.group(2).split(", "))
+        setup = (ROOT / "port/overrides/skills/setup-pstack/SKILL.md").read_text()
+        block = setup.split("# budget: large (xhigh)\n", 1)[1].split("```", 1)[0]
+        example = dict(line.split(": ", 1) for line in block.strip().splitlines())
+        self.assertEqual(len(defaults), 17)
+        self.assertEqual(example, defaults)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -33,7 +33,7 @@ cd p3-stack
 ./install.sh
 ```
 
-`install.sh` reads T3's provider settings and finds the Claude config dir of every Claude instance, the same way T3 does (`homePath`, else the instance's `CLAUDE_CONFIG_DIR`, else `~/.claude`). In each one it creates a single symlink, `skills/p3 -> <checkout>/plugin`. Claude Code loads that folder as the plugin `p3@skills-dir`, with its skills, agents, and hooks. The installer writes nothing else: no `settings.json` edits, no marketplace records.
+`install.sh` reads T3's provider settings and finds the Claude config dir of every Claude instance, the same way T3 does (`homePath`, else the instance's `CLAUDE_CONFIG_DIR`, else `~/.claude`). It skips instances that are disabled in T3, and also links a `CLAUDE_CONFIG_DIR` exported in your shell (the T3 desktop app does not pass that variable on). In each folder it creates a single symlink, `skills/p3 -> <checkout>/plugin`. Claude Code loads that folder as the plugin `p3@skills-dir`, with its skills, agents, and hooks. The installer writes nothing else: no `settings.json` edits, no marketplace records.
 
 Then start a new Claude thread in T3.
 

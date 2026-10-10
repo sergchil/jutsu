@@ -21,16 +21,19 @@ class InstallTest(unittest.TestCase):
         self.default = self.home / ".claude"
         self.work = self.home / "claude-work"
         self.envdir = self.home / "claude-env"
-        for d in (self.default, self.work, self.envdir):
+        self.off = self.home / "claude-off"
+        for d in (self.default, self.work, self.envdir, self.off):
             d.mkdir()
         self.settings = self.home / ".t3" / "userdata" / "settings.json"
         self.settings.parent.mkdir(parents=True)
         self.settings.write_text(json.dumps({"providerInstances": {
             "codex": {"driver": "codex", "config": {"homePath": "~/should-not-matter"}},
             "claude-work": {"driver": "claudeAgent", "config": {"homePath": "~/claude-work"}},
-            "claude-env": {"driver": "claudeAgent", "enabled": False,
+            "claude-env": {"driver": "claudeAgent",
                            "environment": [{"name": "CLAUDE_CONFIG_DIR", "value": str(self.envdir)}],
                            "config": {"homePath": ""}},
+            "claude-off": {"driver": "claudeAgent", "enabled": False, "config": {"homePath": "~/claude-off"}},
+            "claude-off2": {"driver": "claudeAgent", "config": {"enabled": False, "homePath": "~/claude-off"}},
             "claude-dup": {"driver": "claudeAgent", "config": {"homePath": ""}},
         }}))
         self.env = {k: v for k, v in os.environ.items() if k != "CLAUDE_CONFIG_DIR"}
@@ -54,6 +57,18 @@ class InstallTest(unittest.TestCase):
             self.assertEqual(self.link(d).resolve(), PLUGIN)
         self.assertFalse((self.home / "should-not-matter").exists())
         self.assertEqual(r.stdout.count("linked "), 3)
+        self.assertFalse(self.link(self.off).exists())
+        self.assertIn("skip: T3 instance claude-off is disabled", r.stdout)
+        self.assertIn("skip: T3 instance claude-off2 is disabled", r.stdout)
+
+    def test_links_both_home_and_a_shell_config_dir(self):
+        shell_dir = self.home / "shell-claude"
+        shell_dir.mkdir()
+        self.env["CLAUDE_CONFIG_DIR"] = str(shell_dir)
+        r = self.run_install()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertTrue(self.link(shell_dir).is_symlink())
+        self.assertTrue(self.link(self.default).is_symlink())
 
     def test_is_idempotent(self):
         self.run_install()
@@ -89,10 +104,20 @@ class InstallTest(unittest.TestCase):
 
     def test_relinks_a_dangling_link_from_a_moved_checkout(self):
         (self.default / "skills").mkdir()
-        self.link(self.default).symlink_to(self.home / "old-checkout" / "plugin")
+        self.link(self.default).symlink_to(self.home / "old" / ROOT.name / "plugin")
         r = self.run_install()
         self.assertEqual(r.returncode, 0, r.stdout)
         self.assertEqual(self.link(self.default).resolve(), PLUGIN)
+
+    def test_refuses_a_dangling_link_into_another_project(self):
+        (self.default / "skills").mkdir()
+        foreign = self.home / "somewhere" / "plugin"
+        self.link(self.default).symlink_to(foreign)
+        r = self.run_install()
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertEqual(os.readlink(self.link(self.default)), str(foreign))
+        self.run_install("--uninstall")
+        self.assertTrue(self.link(self.default).is_symlink())
 
     def test_reports_conflicting_pstack_ports(self):
         (self.default / "settings.json").write_text(json.dumps({"enabledPlugins": {

@@ -5,7 +5,7 @@
 #
 #   p3-mode expand   UserPromptExpansion: /p3 or /p3:poteto-mode turns the mode on, "off" turns it off
 #   p3-mode prompt   UserPromptSubmit: one-line reminder while the mode is on
-#   p3-mode start    SessionStart (resume|compact): reread the router while the mode is on
+#   p3-mode start    SessionStart: after compact, reread the router; after resume, a one-line reminder
 #
 # It never blocks: every path exits 0, and it prints nothing it cannot stand behind.
 # State is one file per session under ${CLAUDE_PLUGIN_DATA}/sessions.
@@ -53,8 +53,11 @@ case "$event" in
   start)
     [ -f "$state" ] || exit 0
     case "$(field source)" in
-      resume|compact)
-        printf '%s\n' "p3 poteto mode is on in this session. Context was compacted or resumed, so the router may be cut off. Reread $router in full before the next step, and reread the matched playbook file."
+      compact)
+        printf '%s\n' "p3 poteto mode is on in this session. Context was compacted, so the router may be cut off. Reread $router in full before the next step, and reread the matched playbook file."
+        ;;
+      resume)
+        printf '%s\n' "p3 poteto mode is on in this session (router: $router)."
         ;;
     esac
     ;;

@@ -50,6 +50,13 @@ Each one comes from a real run of a port, or from T3's source. Put each where it
 20. Claude transcripts live under `$CLAUDE_CONFIG_DIR/projects/<dir>/`, where `<dir>` is the working directory with every character other than a letter or digit replaced by `-` (cut to 200 characters plus a hash when longer). Link the runtime's History section instead of restating the rule. Skip `isMeta` and local-command records.
 21. The todo fallback is `.audit/<slug>.todo.md`, one file per session slug, so parallel sessions do not collide.
 22. Babysit reports a behind-base gate instead of resolving it, and confirms its first status read is the PR it was asked about.
+23. No subagent has `AskUserQuestion`, `ScheduleWakeup`, or `/loop`. Questions and timed wakes stay in a top-level thread. A babysitting subagent reruns the watcher in the foreground.
+24. Reports into a coordinator use `t3_thread_send` with `mode: "queue"`. The default `auto` steers an active turn, and a steer interrupts Claude's running tools.
+25. A launched thread is a new session where poteto mode is off. Its brief opens with the router's absolute path.
+26. In plan mode, Claude calls `ExitPlanMode`. T3 builds its plan card from that call and denies it.
+27. Todo tools are off on current Claude models by default, so the `.audit/` file fallback is the normal path.
+28. Keep `.p3/` and `.audit/` out of git through `git rev-parse --git-path info/exclude`. In a worktree `.git` is a file.
+29. The default effort is `xhigh`, as upstream runs. `setup-pstack`'s example table must equal the runtime's Roles (a test checks it).
 
 ## Tests
 

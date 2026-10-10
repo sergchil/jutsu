@@ -31,7 +31,7 @@ The defaults are the role lines in [the runtime's Roles]({{p3}}/skills/poteto-mo
 - `medium — high reasoning`
 - `small — medium reasoning`
 
-**(b) Apply it.** Build the working table from the defaults, and on a re-run keep the model of any role the user changed (another alias, a list, a T3 target, or `inherit`). `unlimited`, `large`, `medium`, and `small` set the effort of every alias and T3 entry, panel entries included, to `max`, `xhigh`, `high`, or `medium`. The ladder is `max` > `xhigh` > `high` > `medium` > `low`. In T3, if a model's catalog entry does not offer the target, use the highest effort it offers at or below the target, else mark the role as needing a choice. `inherit` does not change. So `unlimited` turns `opus @xhigh` into `opus @max`. `large` raises `fable @high` to `fable @xhigh` and keeps `opus @xhigh`. `small` turns them into `opus @medium` and `fable @medium`.
+**(b) Apply it.** Build the working table from the defaults, and on a re-run keep the model of any role the user changed (another alias, a list, a T3 target, or `inherit`). `unlimited`, `large`, `medium`, and `small` set the effort of every alias and T3 entry, panel entries included, to `max`, `xhigh`, `high`, or `medium`. The ladder is `max` > `xhigh` > `high` > `medium` > `low`. In T3, if a model's catalog entry does not offer the target, use the highest effort it offers at or below the target, else mark the role as needing a choice. `inherit` does not change. The defaults already run at `xhigh`, so `large` keeps them. `unlimited` turns `opus @xhigh` into `opus @max`, and `small` turns `opus @xhigh` and `fable @xhigh` into `opus @medium` and `fable @medium`.
 
 **(c) Show the roles and confirm.** Show every role with its value, marking any model not confirmed in step 1 as needing a choice. Also list each line step 2 dropped. Ask whether to accept as-is or change specific roles, with `AskUserQuestion` and a non-empty description on every option. The tool takes at most four options per question and adds an Other field, so ask accept or change first. Then, for each role to change, offer up to four values and let Other take the rest. The values are the detected aliases, any T3 targets, and `inherit` (this role runs on the session's model and effort). For panel roles (arena runners, architect runners, interrogate reviewers) the value is a list, and one subagent runs per entry, `inherit` entries included, so the list length sets the count. `arena cross-judge pool` is also a list, but Arena selects one value from it whose model family differs from the parent's when possible. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
 
@@ -53,12 +53,12 @@ bug-fix: fable @xhigh
 perf-issue: fable @xhigh
 hillclimb: fable @xhigh
 judgment and prose: opus @xhigh
-hardest tasks: fable @xhigh
+hardest tasks: opus @xhigh
 how explorer: sonnet @xhigh
 how explainer: opus @xhigh
 why investigators: sonnet @xhigh
 why synthesizer: opus @xhigh
-reflect tooling: opus @xhigh
+reflect tooling: sonnet @xhigh
 reflect judgment, divergent, synthesizer: opus @xhigh
 arena runners: opus @xhigh, fable @xhigh, sonnet @xhigh
 arena cross-judge pool: opus @xhigh, fable @xhigh, sonnet @xhigh

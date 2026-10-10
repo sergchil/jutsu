@@ -14,7 +14,7 @@ This skill orchestrates three others: an inline mining pass (see step 1), the Au
 
 ### 0. Check for an existing skill
 
-Look recursively for `.claude/skills/**/*-mode/SKILL.md` and `$CLAUDE_CONFIG_DIR/skills/*-mode/SKILL.md` (default `~/.claude/skills/`) matching the user's handle. Mode skills can live in a personal category directory (`.claude/skills/<handle>/`), not only at the top level. If one exists, confirm intent with `AskUserQuestion`, giving each option a non-empty description (unless they already said "update my skill" or similar):
+Look recursively for `.claude/skills/**/*-mode/SKILL.md` and `$CLAUDE_CONFIG_DIR/skills/*-mode/SKILL.md` (default `~/.claude/skills/`) matching the user's handle. Older mode skills may sit in a personal category directory (`.claude/skills/<handle>/`), where Claude Code does not load them. If one exists, confirm intent with `AskUserQuestion`, giving each option a non-empty description (unless they already said "update my skill" or similar):
 
 - Update the existing skill (default for repeat runs)
 - Start fresh (rare, ask why before doing it)
@@ -66,7 +66,7 @@ The **poteto-mode** skill (`../../skills/poteto-mode/SKILL.md`) shows the shape.
 
 Follow the Authoring a skill playbook to author the skill. Placement:
 
-- Path: preserve an existing mode skill's category. For a new mode, use `.claude/skills/<handle>/<handle>-mode/SKILL.md` when the repo has an established personal category for that handle. Otherwise default to `.claude/skills/<handle>-mode/SKILL.md` in the project (or `$CLAUDE_CONFIG_DIR/skills/<handle>-mode/`, default `~/.claude/skills/<handle>-mode/`, if the user prefers a personal skill).
+- Path: preserve an existing mode skill's category. For a new mode, use `.claude/skills/<handle>-mode/SKILL.md`, since Claude Code and T3 load only `skills/<name>/SKILL.md` one level deep. Move an existing mode skill found in a nested category to that level. Default to `.claude/skills/<handle>-mode/SKILL.md` in the project (or `$CLAUDE_CONFIG_DIR/skills/<handle>-mode/`, default `~/.claude/skills/<handle>-mode/`, if the user prefers a personal skill).
 - Handle: the user's first name or chosen identifier.
 - Frontmatter `description`: trigger on their name + `/<handle>-mode` + "work in their style", not on generic keywords like "write code" or "review PR".
 - Frontmatter formatting: follow the playbook's validation step. Keep `description` as one YAML scalar. Quote it or use `description: >-` with indented continuation lines when punctuation or wrapping requires it.
