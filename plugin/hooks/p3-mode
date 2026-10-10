@@ -1,0 +1,62 @@
+#!/bin/sh
+# p3 mode hook. Keeps poteto mode on for a session once the user runs /p3, the way
+# Cursor's Custom Mode keeps it on, and re-points the model at the router after a
+# compaction or resume.
+#
+#   p3-mode expand   UserPromptExpansion: /p3 or /p3:poteto-mode turns the mode on, "off" turns it off
+#   p3-mode prompt   UserPromptSubmit: one-line reminder while the mode is on
+#   p3-mode start    SessionStart (resume|compact): reread the router while the mode is on
+#
+# It never blocks: every path exits 0, and it prints nothing it cannot stand behind.
+# State is one file per session under ${CLAUDE_PLUGIN_DATA}/sessions.
+
+event="${1:-}"
+input=$(cat 2>/dev/null) || exit 0
+
+field() {
+  printf '%s' "$input" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\\([^\"\\\\]*\\)\".*/\\1/p" | head -n 1
+}
+
+session=$(field session_id)
+case "$session" in
+  ''|*[!A-Za-z0-9_-]*) exit 0 ;;
+esac
+
+data="${CLAUDE_PLUGIN_DATA:-}"
+[ -n "$data" ] || exit 0
+state_dir="$data/sessions"
+state="$state_dir/$session"
+root="${CLAUDE_PLUGIN_ROOT:-}"
+router="$root/skills/poteto-mode/SKILL.md"
+
+case "$event" in
+  expand)
+    [ -z "$(field agent_id)" ] || exit 0
+    name=$(field command_name)
+    case "$name" in
+      p3|p3:poteto-mode) ;;
+      *) exit 0 ;;
+    esac
+    args=$(field command_args | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    mkdir -p "$state_dir" 2>/dev/null || exit 0
+    if [ "$args" = "off" ]; then
+      rm -f "$state" 2>/dev/null
+    else
+      printf 'on\n' > "$state" 2>/dev/null
+      find "$state_dir" -type f -mtime +30 -exec rm -f {} + 2>/dev/null
+    fi
+    ;;
+  prompt)
+    [ -f "$state" ] || exit 0
+    printf '%s\n' "p3 poteto mode is on in this session. New task? Playbook match or rigor needed -> apply poteto mode (router: $router). Casual turn or user opts out -> don't."
+    ;;
+  start)
+    [ -f "$state" ] || exit 0
+    case "$(field source)" in
+      resume|compact)
+        printf '%s\n' "p3 poteto mode is on in this session. Context was compacted or resumed, so the router may be cut off. Reread $router in full before the next step, and reread the matched playbook file."
+        ;;
+    esac
+    ;;
+esac
+exit 0

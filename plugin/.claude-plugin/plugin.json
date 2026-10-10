@@ -1,0 +1,12 @@
+{
+  "name": "p3",
+  "displayName": "p3-stack",
+  "version": "0.1.0",
+  "description": "poteto's pstack for Claude Code in T3 Code: one mode that routes every task to a rigorous playbook, principles behind each decision, and verification you can trust.",
+  "author": { "name": "Sergey Chilingaryan", "url": "https://github.com/sergchil" },
+  "homepage": "https://github.com/sergchil/p3-stack",
+  "repository": "https://github.com/sergchil/p3-stack",
+  "license": "MIT",
+  "keywords": ["pstack", "poteto-mode", "t3-code", "claude-code", "agent-skills"],
+  "agents": ["./agents/poteto-agent.md", "./agents/comment-sicko.md"]
+}

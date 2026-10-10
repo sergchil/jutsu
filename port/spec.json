@@ -1,0 +1,18 @@
+{
+  "vendor": "vendor/pstack",
+  "exclude": [
+    ".cursor-plugin/",
+    ".gitignore",
+    "README.md",
+    "LICENSE",
+    "assets/",
+    "automations/",
+    "docs/",
+    "skills/make-bot-ui/"
+  ],
+  "rename": {},
+  "frontmatter": {
+    "drop": ["mode", "icon", "color", "reminder", "disable-model-invocation", "is_background"],
+    "model_invocable": []
+  }
+}
