@@ -1,5 +1,12 @@
 ![jutsu: a potato ninja and its shadow clones](docs/images/header.jpg)
 
+[![ci](https://github.com/sergchil/jutsu/actions/workflows/ci.yml/badge.svg)](https://github.com/sergchil/jutsu/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/sergchil/jutsu?color=f0436f)](https://github.com/sergchil/jutsu/releases)
+[![MIT license](https://img.shields.io/github/license/sergchil/jutsu?color=762dee)](LICENSE)
+[![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757?logo=claude&logoColor=white)](https://github.com/anthropics/claude-code)
+[![built for T3 Code](https://img.shields.io/badge/built_for-T3_Code-111111)](https://github.com/pingdotgg/t3code)
+[![website](https://img.shields.io/badge/website-sergchil.github.io%2Fjutsu-fd5817)](https://sergchil.github.io/jutsu/)
+
 **jutsu** is [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan (poteto), ported to **Claude Code inside [T3 Code](https://github.com/pingdotgg/t3code)**.
 
 One command, `/jutsu`, turns on poteto mode. It routes each task to one of pstack's 23 playbooks (bug fix, feature, refactor, babysit a PR, overnight run…), applies its 24 principles, and proves the work before it calls it done. In T3 it uses T3's own tools: parallel threads in their own worktrees, PR watching, schedules, the browser, and simulators.
@@ -43,6 +50,6 @@ Evidence for every cell, commits, and our own known gaps: [docs/COMPARISON.md](d
 
 ## More
 
-[Website](https://sergchil.github.io/jutsu/) · [How it works](docs/HOW-IT-WORKS.md) · [Porting rules](docs/PORTING.md) · [Updating](docs/UPDATING.md)
+[Website](https://sergchil.github.io/jutsu/) · [How it works](docs/HOW-IT-WORKS.md) · [Porting rules](docs/PORTING.md) · [Updating](docs/UPDATING.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 The skills, principles, and language are Lauren Tan's. The Claude Code and T3 wiring is this repo's, with ideas from the ports in [NOTICE.md](NOTICE.md). MIT, see [LICENSE](LICENSE).

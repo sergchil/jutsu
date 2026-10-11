@@ -158,7 +158,8 @@ class DocsTest(unittest.TestCase):
     def test_repo_docs_links_resolve(self):
         import re
         link = re.compile(r"\]\(([^)\s#]+)(#[^)]*)?\)")
-        for doc in [ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md"))]:
+        for doc in [*sorted(ROOT.glob("*.md")), *sorted((ROOT / "docs").glob("*.md")),
+                    ROOT / ".github" / "pull_request_template.md"]:
             text = doc.read_text()
             for m in link.finditer(text):
                 target = m.group(1)

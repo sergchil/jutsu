@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in jutsu does not work in Claude Code or T3 Code.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. If the playbook's advice itself is wrong, and pstack in Cursor says the same, please report it [upstream](https://github.com/cursor/plugins/issues).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you type, and what did jutsu do?
+      placeholder: I typed `$jutsu fix the flaky login test` in a T3 thread, and ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+  - type: dropdown
+    id: host
+    attributes:
+      label: Where you ran it
+      options:
+        - T3 Code nightly
+        - T3 Code stable
+        - Claude Code in a terminal
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Your `claude --version`, the T3 Code version, and the jutsu commit (`git rev-parse --short HEAD` in the jutsu folder).
+      placeholder: Claude Code 2.1.295, T3 Code 0.0.46 nightly, jutsu 0b197f0
+    validations:
+      required: true
+  - type: textarea
+    id: install-status
+    attributes:
+      label: Install status
+      description: The output of `./install.sh --status`, run in the jutsu folder.
+      render: shell
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Logs, screenshots, or transcript lines around the problem. Remove anything private first.
