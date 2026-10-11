@@ -37,21 +37,9 @@ Removes everything jutsu added to each Claude config folder that T3 uses: the pl
 
 ## Compared with other ports (2026-10-11)
 
-| | [pstack](https://github.com/cursor/plugins/tree/main/pstack) | **jutsu** | [pstack-t3](https://github.com/creedants/pstack-t3) | [waffle](https://github.com/waffleflopper/p3-stack) | [uzair](https://github.com/uzairansaruzi/p3-stack) | [pstack-claude](https://github.com/michael-denyer/pstack-claude) |
-|---|---|---|---|---|---|---|
-| Runs in | Cursor | Claude in T3 | T3, 4 providers | T3: Claude, Codex | T3 | Claude Code, Codex, Pi, Copilot |
-| pstack version | 0.15.17 | 0.15.17 | 0.15.17 | 0.15.15 | ~0.15.10 | 0.15.15 |
-| Claude in T3 finds the skills | — | ✅ | ⚠️ | ✅ | ❌ | ✅ |
-| Mode stays on (turns, compaction, fork) | ✅ | ✅ | ❌ | ⚠️ | ❌ | ⚠️ |
-| Router reaches the other skills | — | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Uses T3 threads, PR watch, schedules | — | ✅ | ✅ | ✅ | ✅ | — |
-| Each parallel writer in its own worktree | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Safe T3 launches (SHA base, retry keys, merge heartbeat) | — | ✅ | ⚠️ | ❌ | ❌ | — |
-| Upstream sync with drift check + CI | — | ✅ | ⚠️ | ❌ | ❌ | ✅ |
-| Tests passing | 52 | 50 | 1,931 (not run here) | 21 | none | 1,187 |
-| Uninstall | Cursor | ✅ | ✅ | ✅ | ❌ | ✅ |
+![jutsu compared with pstack, pstack-t3, both p3-stack ports, and pstack-claude](docs/images/comparison.png)
 
-✅ yes · ⚠️ partly · ❌ no · — not a goal. Evidence, commits, and our own known gaps: [docs/COMPARISON.md](docs/COMPARISON.md). Live tests: [docs/TESTED.md](docs/TESTED.md).
+Evidence for every cell, commits, and our own known gaps: [docs/COMPARISON.md](docs/COMPARISON.md). Live tests: [docs/TESTED.md](docs/TESTED.md).
 
 ## More
 
