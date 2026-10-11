@@ -140,6 +140,17 @@ def apply_subs(out_rel: str, text: str, compiled: list) -> str:
     return text
 
 
+def bare_command_pattern(names) -> "re.Pattern[str]":
+    """A /<skill> command written the upstream (Cursor) way. Not a path, URL, or /p3:<skill>."""
+    return re.compile(r"(?<![\w:/.\-~$])/(" + "|".join(map(re.escape, sorted(names, key=len, reverse=True)))
+                      + r")(?![\w/-]|\.\w)")
+
+
+def name_commands(text: str, pattern) -> str:
+    """Skill commands run as /p3:<name> in this plugin."""
+    return pattern.sub(r"/p3:\1", text)
+
+
 P3_TOKEN = re.compile(r"\{\{p3\}\}")
 
 
@@ -220,12 +231,13 @@ def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[
         shutil.copymode(src, dest)
         produced[out_rel] = "added"
 
+    commands = bare_command_pattern([d.name for d in (out_dir / "skills").iterdir() if d.is_dir()])
     for out_rel, kind in produced.items():
-        if kind == "binary":
+        if kind == "binary" or not out_rel.endswith(".md"):
             continue
         path = out_dir / out_rel
         text = path.read_text(encoding="utf-8")
-        resolved = resolve_p3_token(out_rel, text)
+        resolved = name_commands(resolve_p3_token(out_rel, text), commands)
         if resolved != text:
             path.write_text(resolved, encoding="utf-8")
 

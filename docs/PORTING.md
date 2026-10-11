@@ -57,6 +57,9 @@ Each one comes from a real run of a port, or from T3's source. Put each where it
 27. Todo tools are off on current Claude models by default, so the `.audit/` file fallback is the normal path.
 28. Keep `.p3/` and `.audit/` out of git through `git rev-parse --git-path info/exclude`. In a worktree `.git` is a file.
 29. The default effort is `xhigh`, as upstream runs. `setup-pstack`'s example table must equal the runtime's Roles (a test checks it).
+30. A launched T3 thread starts from a commit SHA. T3 names a new worktree's branch `t3/<hash>` and renames it in the background, so a branch name read from T3 can vanish before the launch runs ("Workspace preparation failed"). Read back each launched thread within a minute.
+31. Keep upstream's bare `/<skill>` commands. The build rewrites them to `/p3:<skill>`, so new upstream skills need no edit for naming.
+32. A fork (T3's thread fork) has a new session id. The mode hook restores poteto mode from the last `/p3` command in the transcript on `fork`, `resume`, and `compact`.
 
 ## Tests
 

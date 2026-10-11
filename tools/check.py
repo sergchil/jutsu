@@ -143,6 +143,18 @@ def check(plugin: Path) -> list[str]:
                 line = text.count("\n", 0, hit.start()) + 1
                 errors.append(f"{r}:{line}: not a T3 tool: {name}")
 
+    # Skill commands are /p3:<name> in this plugin. A bare /<name> is upstream's Cursor
+    # naming and does not run here.
+    names = sorted(d.name for d in plugin.glob("skills/*") if d.is_dir())
+    bare = re.compile(r"(?<![\w:/.\-~$])/(" + "|".join(map(re.escape, sorted(names, key=len, reverse=True)))
+                      + r")(?![\w/-]|\.\w)") if names else None
+    if bare:
+        for md in sorted(p for p in plugin.rglob("*.md") if "node_modules" not in p.parts):
+            text = md.read_text()
+            for hit in bare.finditer(text):
+                line = text.count("\n", 0, hit.start()) + 1
+                errors.append(f"{rel(md)}:{line}: bare skill command /{hit.group(1)}; use /p3:{hit.group(1)}")
+
     hooks = plugin / "hooks" / "hooks.json"
     try:
         spec = json.loads(hooks.read_text())["hooks"]
