@@ -23,8 +23,8 @@
     },
     {
       "id": "B4-4",
-      "pattern": "- `Read` tool calls against any `SKILL.md` file (workspace `.cursor/skills/`, user-level `~/.cursor/skills/`, or plugin-installed paths under `~/.cursor/plugins/`)\n- `Task` prompts that name a skill path\n- Tool calls (Shell, Grep, MCP, etc.) that match a skill's documented commands",
-      "replacement": "- `Skill` tool calls, and user turns that invoke a skill as `/<name>`\n- `Read` tool calls against any `SKILL.md` file (project `.claude/skills/`, user-level `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/`, or plugin-installed paths under `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/`), or against any file in the p3 plugin directory, whose skills, playbooks, and principles load by path\n- `Agent` prompts that name a skill path\n- Tool calls (Bash, Grep, MCP, etc.) that match a skill's documented commands",
+      "pattern": "A skill counts as used when the transcript shows a `Read` of its `SKILL.md` (under `.cursor/skills/`, `~/.cursor/skills/`, or `~/.cursor/plugins/`), a `Task` prompt naming its path, or a tool call (Shell, Grep, MCP, etc.) matching its documented commands.",
+      "replacement": "A skill counts as used when the transcript shows a `Skill` tool call or a user turn that invokes it as `/<name>`, a `Read` of its `SKILL.md` (under project `.claude/skills/`, `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/`, or `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/`) or of any file in the p3 plugin directory, whose skills, playbooks, and principles load by path, an `Agent` prompt naming its path, or a tool call (Bash, Grep, MCP, etc.) matching its documented commands.",
       "files": "^skills/reflect/references/(judgment|tooling|divergent)-reviewer\\.md$",
       "regex": false
     },

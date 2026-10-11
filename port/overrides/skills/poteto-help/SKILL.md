@@ -69,6 +69,7 @@ The default answer is `/p3`, which runs most of the others when its steps need t
 | Know why code is shaped this way, or where a number came from | [`/p3:why`]({{p3}}/skills/why/SKILL.md) |
 | Understand a change or subsystem, explained plainly | [`/p3:teach`]({{p3}}/skills/teach/SKILL.md) |
 | Catch up on their own recent work on a topic | [`/p3:recall`]({{p3}}/skills/recall/SKILL.md) |
+| Catch up on everything in this chat since their last message, with enough context to decide each action item | [`/p3:ketchup`]({{p3}}/skills/ketchup/SKILL.md) |
 | Know what a small diff could break outside itself | [`/p3:blast-radius`]({{p3}}/skills/blast-radius/SKILL.md) |
 | Settle types and module shape before code that crosses a function boundary | [`/p3:architect`]({{p3}}/skills/architect/SKILL.md) |
 | Get several attempts at one brief, merged into the best one | [`/p3:arena`]({{p3}}/skills/arena/SKILL.md) |
@@ -99,7 +100,7 @@ Close calls:
 - `/p3:arena` gives every worker the same brief and merges the best parts. `/p3:swarm` splits work into slices or a race and returns one report.
 - `/p3:architect` implements right after it settles the design. Add "with checkpoint" to review the design before it writes code.
 - `/p3:interrogate` reviews the diff. `/p3:blast-radius` looks for breakage outside the diff and proves the one fact that makes the change safe.
-- `/p3:recall` rebuilds context across recent chats. Resuming one specific chat or branch is the Session pickup playbook.
+- `/p3:recall` rebuilds context across recent chats. `/p3:ketchup` covers only this chat since the user's last message. Resuming one specific chat or branch is the Session pickup playbook.
 - `/p3:figure-it-out` designs one rigorous run. The Orchestrate playbook runs a program that spans days and many PRs. The Autonomous run playbook drives one task to a finish condition.
 
 Not in p3:

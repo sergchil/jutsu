@@ -86,15 +86,15 @@
     },
     {
       "id": "B5-13",
-      "pattern": "- The **Perf issue** playbook finds",
-      "replacement": "- The **Perf issue** playbook (`{{p3}}/skills/poteto-mode/playbooks/perf-issue.md`) finds",
+      "pattern": "Vet the **Perf issue** playbook's baseline",
+      "replacement": "Vet the **Perf issue** playbook's (`{{p3}}/skills/poteto-mode/playbooks/perf-issue.md`) baseline",
       "files": "^skills/benchmark-checklist/SKILL\\.md$",
       "regex": false
     },
     {
       "id": "B5-14",
-      "pattern": "- The **Hillclimb** playbook loops",
-      "replacement": "- The **Hillclimb** playbook (`{{p3}}/skills/poteto-mode/playbooks/hillclimb.md`) loops",
+      "pattern": "Vet the **Hillclimb** playbook's harness",
+      "replacement": "Vet the **Hillclimb** playbook's (`{{p3}}/skills/poteto-mode/playbooks/hillclimb.md`) harness",
       "files": "^skills/benchmark-checklist/SKILL\\.md$",
       "regex": false
     },

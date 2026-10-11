@@ -112,6 +112,26 @@ class UpstreamUpdateTest(unittest.TestCase):
             self.assertNotIn("babysit.md", r.stderr)
 
 
+class PortRulesTest(unittest.TestCase):
+    def test_bare_skill_commands_become_plugin_commands(self):
+        pattern = build.bare_command_pattern(["how", "bro", "figure-it-out"])
+        cases = {
+            "Use /how or /figure-it-out.": "Use /p3:how or /p3:figure-it-out.",
+            "the voice of [`/bro`](../bro/SKILL.md)": "the voice of [`/p3:bro`](../bro/SKILL.md)",
+            "/p3:how stays": "/p3:how stays",
+            "path skills/how/SKILL.md and ~/x/how and https://a.b/how stay": "path skills/how/SKILL.md and ~/x/how and https://a.b/how stay",
+            "/how.md and /howl stay": "/how.md and /howl stay",
+        }
+        for src, want in cases.items():
+            self.assertEqual(build.name_commands(src, pattern), want, src)
+
+    def test_launched_threads_start_from_a_commit_sha(self):
+        runtime = (ROOT / "plugin/skills/poteto-mode/references/runtime.md").read_text()
+        self.assertIn('"baseRef":"<commit SHA>"', runtime)
+        self.assertIn("Workspace preparation failed", runtime)
+        self.assertNotIn('"baseRef":"<parent branch>"', runtime)
+
+
 class RoleTableTest(unittest.TestCase):
     """setup-pstack's example table must equal the runtime's Roles defaults."""
 
