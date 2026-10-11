@@ -170,6 +170,15 @@ class DocsTest(unittest.TestCase):
         lines = (ROOT / "README.md").read_text().splitlines()
         self.assertLessEqual(len(lines), 90, "keep the README scannable; move detail to docs/")
 
+    def test_website_files_exist(self):
+        import re
+        page = (ROOT / "docs" / "index.html").read_text()
+        local = [m for m in re.findall(r'(?:src|href)="([^"#:]+)"', page)]
+        self.assertTrue(local)
+        for path in local:
+            self.assertTrue((ROOT / "docs" / path).is_file(), f"docs/index.html: {path}")
+        self.assertTrue((ROOT / "docs" / ".nojekyll").is_file(), "docs/.nojekyll keeps GitHub Pages from running Jekyll")
+
 
 class RoleTableTest(unittest.TestCase):
     """setup-pstack's example table must equal the runtime's Roles defaults."""

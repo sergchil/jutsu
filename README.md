@@ -43,6 +43,6 @@ Evidence for every cell, commits, and our own known gaps: [docs/COMPARISON.md](d
 
 ## More
 
-[How it works](docs/HOW-IT-WORKS.md) · [Porting rules](docs/PORTING.md) · [Updating](docs/UPDATING.md)
+[Website](https://sergchil.github.io/jutsu/) · [How it works](docs/HOW-IT-WORKS.md) · [Porting rules](docs/PORTING.md) · [Updating](docs/UPDATING.md)
 
 The skills, principles, and language are Lauren Tan's. The Claude Code and T3 wiring is this repo's, with ideas from the ports in [NOTICE.md](NOTICE.md). MIT, see [LICENSE](LICENSE).

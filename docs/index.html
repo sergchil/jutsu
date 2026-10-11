@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jutsu: pstack's poteto mode for Claude Code in T3 Code</title>
+<meta name="description" content="jutsu ports Lauren Tan's pstack to Claude Code inside T3 Code. One command, /jutsu, sends each task to a pstack playbook and proves the work. Free and MIT.">
+<link rel="canonical" href="https://sergchil.github.io/jutsu/">
+<meta name="theme-color" content="#0b0b10">
+<link rel="icon" type="image/png" sizes="32x32" href="images/icon-32.png">
+<link rel="apple-touch-icon" href="images/icon-180.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="jutsu">
+<meta property="og:title" content="jutsu: pstack's poteto mode for Claude Code in T3 Code">
+<meta property="og:description" content="Lauren Tan's pstack, ported to Claude Code inside T3 Code. One command sends each task to a playbook and proves the work.">
+<meta property="og:url" content="https://sergchil.github.io/jutsu/">
+<meta property="og:image" content="https://sergchil.github.io/jutsu/images/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="jutsu: a potato ninja with its shadow clones">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "jutsu",
+  "description": "Lauren Tan's pstack (poteto mode), ported to Claude Code inside T3 Code.",
+  "url": "https://sergchil.github.io/jutsu/",
+  "codeRepository": "https://github.com/sergchil/jutsu",
+  "license": "https://opensource.org/licenses/MIT",
+  "isBasedOn": "https://github.com/cursor/plugins/tree/main/pstack",
+  "keywords": "pstack, poteto mode, Claude Code, T3 Code, Claude Code plugin, agent skills",
+  "author": { "@type": "Person", "name": "Sergey Chilingaryan", "url": "https://github.com/sergchil" }
+}
+</script>
+<script>document.documentElement.classList.add("js")</script>
+<style>
+  :root {
+    --bg: #0b0b10;
+    --surface: #14141c;
+    --border: #262633;
+    --text: #ececf3;
+    --text-2: #c4c4d2;
+    --muted: #8e8ea3;
+    --pink: #f0436f;
+    --art: linear-gradient(to top right, #fd5817 0%, #de4b58 28%, #bf408b 50%, #9535c6 76%, #762dee 100%);
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); color: var(--text); font: 18px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--pink); color: #fff; }
+  a { color: inherit; }
+  img { display: block; max-width: 100%; height: auto; }
+  code { font-family: var(--mono); font-size: .88em; background: rgba(255, 255, 255, .08); border-radius: 6px; padding: .1em .38em; }
+  a:focus-visible, button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; border-radius: 8px; }
+
+  /* Hero: the colors and the mascot come from the header art. */
+  .hero { background: var(--art); color: #fff; overflow: hidden; }
+  .hero-inner { max-width: 1180px; margin: 0 auto; padding: 56px 32px 64px; display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 16px; }
+  .hero h1 { font-size: clamp(88px, 12vw, 164px); font-weight: 800; line-height: .82; letter-spacing: -.05em; }
+  .tagline { margin-top: 36px; font-size: clamp(21px, 2.1vw, 25px); font-weight: 650; line-height: 1.35; max-width: 24em; }
+  .lead { margin-top: 12px; font-size: 18px; max-width: 30em; color: rgba(255, 255, 255, .94); }
+  .hero code { background: rgba(255, 255, 255, .18); }
+  .cmd { margin-top: 28px; max-width: 36em; overflow: hidden;
+         background: rgba(11, 11, 16, .62); border: 1px solid rgba(255, 255, 255, .16); border-radius: 14px; }
+  .cmd-bar { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 0 10px 0 18px;
+             border-bottom: 1px solid rgba(255, 255, 255, .12); font: 600 13px var(--sans); color: rgba(255, 255, 255, .78); }
+  .cmd pre { padding: 14px 18px 16px; font: 15px/1.7 var(--mono); color: #fff; overflow-x: auto; }
+  .cmd code { background: none; padding: 0; font-size: inherit; }
+  .copy { font: 600 13px var(--sans); color: #fff; cursor: pointer;
+          background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .22); border-radius: 999px; padding: 5px 13px; }
+  .copy:hover { background: rgba(255, 255, 255, .24); }
+  .buttons { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn { display: inline-block; padding: 11px 20px; border-radius: 999px; font-size: 16px; font-weight: 650; text-decoration: none;
+         background: #fff; color: var(--bg); border: 1px solid #fff; transition: transform .15s ease, background .15s ease; }
+  .btn.ghost { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.ghost:hover { background: rgba(255, 255, 255, .12); }
+  .mascot img { width: 100%; max-width: 600px; margin-left: auto;
+                -webkit-mask-image: radial-gradient(ellipse at center, #000 54%, transparent 72%);
+                mask-image: radial-gradient(ellipse at center, #000 54%, transparent 72%); }
+
+  /* Sections */
+  main { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  section { padding-top: 84px; }
+  h2 { font-size: 32px; line-height: 1.2; font-weight: 750; letter-spacing: -.02em; }
+  section > p { margin-top: 14px; color: var(--text-2); max-width: 40em; }
+  .steps { list-style: none; counter-reset: step; margin-top: 30px; display: grid; gap: 22px; max-width: 44em; }
+  .steps li { counter-increment: step; display: grid; grid-template-columns: 44px minmax(0, 1fr); color: var(--text-2); }
+  .steps li::before { content: counter(step); font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--pink); }
+  figure { margin-top: 30px; }
+  figure img { width: 100%; border-radius: 16px; }
+  figcaption { margin-top: 12px; font-size: 16px; color: var(--muted); }
+  figcaption a { color: var(--text-2); }
+  .use { margin-top: 26px; border-top: 1px solid var(--border); }
+  .use > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .use dt { color: var(--muted); font-size: 16px; padding-top: 2px; }
+  .use dd { color: var(--text-2); }
+  .use dd code { color: var(--text); }
+  .credit { margin-top: 84px; padding: 34px 36px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
+  .credit h2 { font-size: 26px; }
+  .credit p { margin-top: 12px; color: var(--text-2); max-width: 42em; }
+  .credit .buttons .btn.ghost { color: var(--text); border-color: var(--border); }
+  .credit .buttons .btn.ghost:hover { background: rgba(255, 255, 255, .06); }
+  footer { max-width: 960px; margin: 72px auto 0; padding: 26px 24px 48px; border-top: 1px solid var(--border);
+           font-size: 15px; color: var(--muted); }
+  footer a { color: var(--text-2); }
+
+  @media (max-width: 860px) {
+    .hero-inner { grid-template-columns: minmax(0, 1fr); padding: 24px 22px 48px; gap: 0; }
+    .mascot { order: -1; }
+    .mascot img { max-width: 440px; margin: 0 auto -18px; }
+    .use > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .credit { padding: 26px 22px; }
+  }
+  @media (max-width: 520px) {
+    .cmd pre { font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .js .hero-copy > * { opacity: 0; animation: rise .6s cubic-bezier(.2, .7, .2, 1) forwards; }
+    .js .hero-copy > :nth-child(2) { animation-delay: .06s; }
+    .js .hero-copy > :nth-child(3) { animation-delay: .12s; }
+    .js .hero-copy > :nth-child(4) { animation-delay: .18s; }
+    .js .hero-copy > :nth-child(5) { animation-delay: .24s; }
+    .js .mascot img { opacity: 0; animation: appear .8s ease .1s forwards; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    @keyframes appear { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <h1>jutsu</h1>
+      <p class="tagline">pstack by Lauren Tan (poteto), ported to Claude Code inside T3 Code.</p>
+      <p class="lead">One command, <code>/jutsu</code>, turns on poteto mode. Each task goes to the matching pstack playbook, and the work is proven before it is called done.</p>
+      <div class="cmd" data-copy>
+        <div class="cmd-bar"><span>Install</span></div>
+        <pre><code>git clone https://github.com/sergchil/jutsu.git
+cd jutsu &amp;&amp; ./install.sh</code></pre>
+      </div>
+      <div class="buttons">
+        <a class="btn" href="https://github.com/sergchil/jutsu">View on GitHub</a>
+        <a class="btn ghost" href="https://github.com/cursor/plugins/tree/main/pstack/docs/guide">What is pstack?</a>
+      </div>
+    </div>
+    <div class="mascot">
+      <img src="images/hero.jpg" width="1100" height="820" fetchpriority="high"
+           alt="The jutsu mascot: a potato ninja making a hand sign, with four shadow clones typing on laptops behind it">
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="how">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><p>Type <code>$jutsu</code> and your task in a T3 thread. In plain Claude Code, type <code>/jutsu</code> and your task.</p></li>
+      <li><p>jutsu picks the matching pstack playbook, such as bug fix, feature, refactor, getting a PR to merge, or an overnight run. Then it follows the playbook's steps.</p></li>
+      <li><p>It proves the work on the real thing, such as tests, the browser, or a simulator, before it says done. Poteto mode stays on for the whole thread until you type <code>/jutsu off</code>.</p></li>
+    </ol>
+  </section>
+
+  <section id="t3">
+    <h2>Made for T3 Code</h2>
+    <p>In T3, jutsu uses T3's own tools: parallel threads in their own worktrees, PR watching, schedules, the browser, and simulators.</p>
+    <figure>
+      <img src="images/picker.jpg" width="1056" height="444" loading="lazy" decoding="async"
+           alt="T3 Code's skill picker with $jutsu typed in the message box and the Jutsu personal skill highlighted">
+      <figcaption><code>$jutsu</code> in T3's skill picker.</figcaption>
+    </figure>
+    <figure>
+      <img src="images/threads.jpg" width="1600" height="1193" loading="lazy" decoding="async"
+           alt="Three T3 threads working in parallel, each in its own git worktree">
+      <figcaption>One request, three changes. jutsu starts a T3 thread for each change, each in its own worktree, then reviews all three.</figcaption>
+    </figure>
+  </section>
+
+  <section id="use">
+    <h2>Use it</h2>
+    <dl class="use">
+      <div><dt>Needs</dt><dd>Claude Code 2.1.292 or newer, and Python 3.9 or newer for the installer. T3's thread, PR, and schedule tools need T3 Code nightly from 2026-10-03. Without T3, jutsu runs in plain Claude Code.</dd></div>
+      <div><dt>Start</dt><dd><code>$jutsu fix the flaky login test</code> in a T3 thread</dd></div>
+      <div><dt>Stop</dt><dd><code>/jutsu off</code></dd></div>
+      <div><dt>Models</dt><dd><code>/jutsu:setup-pstack</code> picks the model and effort for each role</dd></div>
+      <div><dt>Update</dt><dd><code>git pull</code> in the jutsu folder</dd></div>
+      <div><dt>Remove</dt><dd><code>./uninstall.sh</code> removes everything jutsu added. Your repos are not touched.</dd></div>
+    </dl>
+  </section>
+
+  <section id="compare">
+    <h2>Compared with other pstack ports</h2>
+    <figure>
+      <a href="images/comparison.png"><img src="images/comparison.png" width="1600" height="1275" loading="lazy" decoding="async"
+         alt="Table comparing jutsu with pstack, pstack-t3, two p3-stack ports, and pstack-claude on 12 points, checked 2026-10-11"></a>
+      <figcaption>Checked 2026-10-11. <a href="https://github.com/sergchil/jutsu/blob/main/docs/COMPARISON.md">See the evidence for every cell.</a></figcaption>
+    </figure>
+  </section>
+
+  <section class="credit" id="credit">
+    <h2>Built on pstack</h2>
+    <p>pstack and poteto mode are Lauren Tan's work. The playbooks, the principles, and the way of working are hers. jutsu only connects them to Claude Code and T3 Code. To learn pstack itself, read her guide.</p>
+    <div class="buttons">
+      <a class="btn ghost" href="https://github.com/cursor/plugins/tree/main/pstack/docs/guide">pstack guide</a>
+      <a class="btn ghost" href="https://github.com/cursor/plugins/tree/main/pstack">pstack on GitHub</a>
+      <a class="btn ghost" href="https://x.com/poteto">poteto on X</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  jutsu by <a href="https://github.com/sergchil">Sergey Chilingaryan</a> · MIT license · <a href="https://github.com/sergchil/jutsu">GitHub</a>
+</footer>
+
+<script>
+  for (const box of document.querySelectorAll("[data-copy]")) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy";
+    button.textContent = "Copy";
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(box.querySelector("code").innerText.trim());
+        button.textContent = "Copied";
+      } catch {
+        button.textContent = "Select it";
+      }
+      setTimeout(() => { button.textContent = "Copy"; }, 1600);
+    });
+    box.querySelector(".cmd-bar").appendChild(button);
+  }
+</script>
+</body>
+</html>
