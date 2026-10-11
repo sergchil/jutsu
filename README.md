@@ -99,8 +99,10 @@ python3 tools/build.py            # rebuild plugin/
 python3 tools/build.py --check    # fail if plugin/ is stale
 python3 tools/check.py            # static checks on plugin/
 python3 -m unittest discover -s tests
-python3 tools/sync_upstream.py    # pull a new pstack; the build then names each override to re-merge
+python3 tools/sync_upstream.py    # pull a new pstack and list exactly what to port
 ```
+
+Upstream updates: a weekly GitHub Action opens a pull request when pstack changes. See [docs/UPDATING.md](docs/UPDATING.md).
 
 ## Credit
 

@@ -161,6 +161,7 @@ def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[
     lock = load_json(LOCK) if LOCK.exists() else {}
     vendor = ROOT / spec["vendor"]
     notes: list[str] = []
+    problems: list[str] = []
     produced: dict[str, str] = {}
 
     for src in sorted(vendor.rglob("*")):
@@ -179,9 +180,9 @@ def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[
             if relock:
                 lock[out_rel] = have
             elif check_lock and want != have:
-                raise BuildError(
-                    f"override {out_rel}: upstream {rel} changed (lock {str(want)[:12]} != {have[:12]}). "
-                    "Re-merge the override against the new upstream, then run build.py --relock.")
+                problems.append(
+                    f"re-merge port/overrides/{out_rel}: upstream {rel} changed "
+                    f"(see `git diff HEAD -- vendor/pstack/{rel}`)")
             shutil.copyfile(override, dest)
             produced[out_rel] = "override"
         elif is_text(src):
@@ -197,12 +198,12 @@ def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[
 
     for out_rel in sorted(lock):
         if out_rel not in produced and not relock and check_lock:
-            raise BuildError(f"lock entry {out_rel} has no upstream file any more; remove it")
+            problems.append(f"upstream removed the file behind port/overrides/{out_rel}; delete the override and its lock entry")
     for ov in sorted(OVERRIDES.rglob("*")):
         if ov.is_file():
             out_rel = ov.relative_to(OVERRIDES).as_posix()
             if out_rel not in produced:
-                raise BuildError(f"override {out_rel} matches no upstream file; move it to port/added/")
+                problems.append(f"port/overrides/{out_rel} matches no upstream file; move it to port/added/ or delete it")
     if relock:
         lock = {k: v for k, v in lock.items() if (OVERRIDES / k).exists()}
         LOCK.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -228,9 +229,11 @@ def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[
         if resolved != text:
             path.write_text(resolved, encoding="utf-8")
 
-    stale = [s["id"] for s in compiled if s["hits"] == 0]
-    if stale:
-        raise BuildError("substitutions matched nothing (stale or misspelled): " + ", ".join(stale))
+    for s in compiled:
+        if s["hits"] == 0:
+            problems.append(f"substitution {s['id']} matched nothing; upstream text moved, so update or delete the rule")
+    if problems:
+        raise BuildError(f"{len(problems)} thing(s) to port after the upstream change:\n  - " + "\n  - ".join(problems))
     notes.append(f"{len(produced)} files: " + ", ".join(
         f"{k}={sum(1 for v in produced.values() if v == k)}" for k in ("upstream", "override", "added", "binary")))
     return notes

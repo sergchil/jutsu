@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import filecmp
+import json
 import subprocess
 import sys
 import tempfile
@@ -79,6 +80,36 @@ class CheckerTest(unittest.TestCase):
             for needle in ("'`Task`'", "'generalPurpose'", "link does not resolve: missing.md",
                            "not a T3 tool: t3_thread_create", "'{{p3}}'", "missing or not executable"):
                 self.assertIn(needle, text)
+
+
+class UpstreamUpdateTest(unittest.TestCase):
+    """An upstream change must surface every override and rule that needs porting, in one run."""
+
+    def test_upstream_change_lists_everything_to_port(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            for part in ("vendor", "port", "tools"):
+                shutil.copytree(ROOT / part, repo / part)
+            vendor = repo / "vendor" / "pstack"
+            babysit = vendor / "skills/poteto-mode/playbooks/babysit.md"
+            babysit.write_text(babysit.read_text() + "\nA new upstream rule.\n")
+            subs = json.loads((repo / "port/subs/lead.json").read_text())["substitutions"]
+            target = vendor / "skills/poteto-mode/playbooks/investigation.md"
+            target.write_text(target.read_text().replace(subs[0]["pattern"], "the how-to skill"))
+            new_skill = vendor / "skills/brand-new/SKILL.md"
+            new_skill.parent.mkdir(parents=True)
+            new_skill.write_text("---\nname: Brand New\ndescription: d\ndisable-model-invocation: true\n---\nUse the Task tool.\n")
+            r = subprocess.run([sys.executable, str(repo / "tools/build.py"), "--out", str(Path(tmp) / "out")],
+                               capture_output=True, text=True, timeout=120)
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertIn("2 thing(s) to port", r.stderr)
+            self.assertIn("re-merge port/overrides/skills/poteto-mode/playbooks/babysit.md", r.stderr)
+            self.assertIn("substitution lead-1 matched nothing", r.stderr)
+            r = subprocess.run([sys.executable, str(repo / "tools/build.py"), "--out", str(Path(tmp) / "out"), "--no-lock"],
+                               capture_output=True, text=True, timeout=120)
+            self.assertIn("substitution lead-1 matched nothing", r.stderr)
+            self.assertNotIn("babysit.md", r.stderr)
 
 
 class RoleTableTest(unittest.TestCase):

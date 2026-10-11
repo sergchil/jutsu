@@ -81,7 +81,15 @@ def main() -> int:
         shutil.copytree(fresh, VENDOR)
         meta.update(commit=commit, version=version)
         UPSTREAM.write_text(json.dumps(meta, indent=2) + "\n")
-        print(f"vendor/pstack updated. Next: python3 tools/build.py, re-merge, --relock, run the tests.")
+        print(f"vendor/pstack updated to {version} ({commit[:12]}).")
+        with tempfile.TemporaryDirectory(prefix="p3sync-build-") as out:
+            try:
+                build.build(Path(out), relock=False, check_lock=True)
+                print("Nothing to port: the build passes as is. Run the tests, then commit.")
+            except build.BuildError as exc:
+                print(exc)
+                print("Port each item, then: python3 tools/build.py --relock && python3 tools/check.py "
+                      "&& python3 -m unittest discover -s tests")
     return 0
 
 

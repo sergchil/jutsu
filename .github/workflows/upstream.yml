@@ -1,0 +1,51 @@
+name: upstream pstack
+
+# Every Monday, pull the latest pstack into vendor/ and open a pull request that
+# lists exactly what to port. The build on that branch fails until each listed
+# override and rule is re-merged, so nothing drifts silently.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: sync vendor/pstack
+        id: sync
+        run: |
+          {
+            echo "Upstream pstack changed. The sync output below lists every override and rule to port."
+            echo "Port each one on this branch, then run \`python3 tools/build.py --relock\` and the tests (docs/UPDATING.md)."
+            echo
+            echo '```text'
+            python3 tools/sync_upstream.py
+            echo '```'
+          } > "$RUNNER_TEMP/sync.md"
+          cat "$RUNNER_TEMP/sync.md"
+          if git diff --quiet -- vendor port/upstream.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: open the update pull request
+        if: steps.sync.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: upstream/pstack
+          title: Upstream pstack update
+          body-path: ${{ runner.temp }}/sync.md
+          commit-message: "vendor: sync upstream pstack"
+          add-paths: |
+            vendor/**
+            port/upstream.json

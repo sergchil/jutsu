@@ -7,7 +7,7 @@
       { "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/p3-mode\" prompt", "timeout": 10 } ] }
     ],
     "SessionStart": [
-      { "matcher": "resume|compact", "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/p3-mode\" start", "timeout": 10 } ] }
+      { "matcher": "resume|fork|compact", "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/p3-mode\" start", "timeout": 10 } ] }
     ]
   }
 }

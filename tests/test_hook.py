@@ -119,6 +119,56 @@ class ModeHookTest(unittest.TestCase):
         self.assertFalse(Path("/tmp/p3-pwned").exists())
         self.assertEqual(self.state_files(), [SESSION])
 
+    # A T3 fork (SDK forkSession) or a lost state file starts a session with no state.
+    # The hook restores it from the last /p3 command in the session's transcript.
+    def transcript(self, *commands) -> Path:
+        path = Path(self.tmp.name) / "session.jsonl"
+        lines = ['{"type":"user","message":{"role":"user","content":"hi"}}']
+        for name, args in commands:
+            content = f"<command-message>{name[1:]}</command-message>\\n<command-name>{name}</command-name>"
+            if args is not None:
+                content += f"\\n<command-args>{args}</command-args>"
+            lines.append('{"type":"user","message":{"role":"user","content":"' + content.replace('"', '\\"') + '"},"uuid":"u"}')
+        path.write_text("\n".join(lines) + "\n")
+        return path
+
+    def start(self, source, transcript):
+        return self.run_hook("start", {"session_id": SESSION, "source": source, "transcript_path": str(transcript)})
+
+    def test_fork_restores_the_mode_from_history(self):
+        tp = self.transcript(("/p3", 'fix the "login" bug'))
+        r = self.start("fork", tp)
+        self.assertEqual(r.stdout.strip(), "p3 poteto mode is on in this session (router: /opt/p3/skills/poteto-mode/SKILL.md).")
+        self.assertEqual(self.state_files(), [SESSION])
+        self.assertIn("p3 poteto mode is on", self.prompt().stdout)
+
+    def test_restore_respects_the_last_command(self):
+        for history, expect_on in [
+            ([("/p3", "go"), ("/p3", "off")], False),
+            ([("/p3", "off"), ("/p3", "go")], True),
+            ([("/p3", "go"), ("/p3", "OFF ")], False),
+            ([("/p3", "off the record, go")], True),
+            ([("/p3", None)], True),
+            ([("/p3:poteto-mode", "go")], True),
+            ([("/p3:how", "how does it work")], False),
+            ([], False),
+        ]:
+            with self.subTest(history=history):
+                for f in (self.data / "sessions").glob("*") if (self.data / "sessions").exists() else []:
+                    f.unlink()
+                r = self.start("resume", self.transcript(*history))
+                self.assertEqual(r.returncode, 0)
+                self.assertEqual(self.state_files() == [SESSION], expect_on)
+
+    def test_startup_never_restores(self):
+        r = self.start("startup", self.transcript(("/p3", "go")))
+        self.assertEqual((r.returncode, r.stdout), (0, ""))
+        self.assertEqual(self.state_files(), [])
+
+    def test_missing_transcript_never_blocks(self):
+        r = self.start("fork", Path(self.tmp.name) / "nope.jsonl")
+        self.assertEqual((r.returncode, r.stdout), (0, ""))
+
 
 if __name__ == "__main__":
     unittest.main()
