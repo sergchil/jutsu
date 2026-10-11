@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Read-only worktree prune audit. Classifies every git worktree by size, merge
-# state, uncommitted work, remote/PR state, and the most recent Claude session
-# that operated in it. Emits a table sorted by size with a suggested bucket.
-# Never deletes anything; deletion stays a human-gated step in the playbook.
+# Worktree prune audit. Classifies every git worktree by size, merge state,
+# uncommitted work, remote/PR state, and the most recent Claude session that
+# operated in it. Emits a table sorted by size with a suggested bucket. Never
+# deletes anything; deletion stays a human-gated step in the playbook. The only
+# write is `git fetch origin main`, which refreshes origin/main for the merge check.
 #
 # Usage: worktree-audit.sh [repo-path]   (defaults to the current repo)
 set -u
@@ -20,7 +21,7 @@ git fetch origin main --quiet 2>/dev/null || echo "warn: could not fetch origin/
 # PR state by branch, fetched once. Empty if gh is unavailable.
 prs=$(mktemp)
 gh pr list --author "@me" --state all --limit 1000 \
-	--json number,state,headRefName 2>/dev/null > "$prs" || echo "[]" > "$prs"
+	--json number,state,headRefName,headRefOid 2>/dev/null > "$prs" || echo "[]" > "$prs"
 
 # Transcript dirs: Claude keeps one per working directory under
 # ${CLAUDE_CONFIG_DIR:-~/.claude}/projects, named for the cwd with every
@@ -54,19 +55,30 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
 	# real signal; merge-base only catches fast-forward/rebase merges.
 	git merge-base --is-ancestor "$head" origin/main 2>/dev/null && merged=YES || merged=no
 
-	# Distinguish real WIP (tracked edits) from disposable untracked scratch.
-	porcelain=$(git -C "$wt" status --porcelain 2>/dev/null)
-	if [ -z "$porcelain" ]; then dirty=clean
-	elif printf '%s\n' "$porcelain" | grep -qv '^??'; then
-		dirty="wip:$(printf '%s\n' "$porcelain" | grep -cv '^??')"
-	else dirty="scratch:$(printf '%s\n' "$porcelain" | grep -c '^??')"; fi
+	# Everything that exists only in this folder is work at stake: tracked edits,
+	# untracked files, and ignored files (.env, logs, build output). A plain
+	# `git worktree remove` deletes ignored files without asking, so they count
+	# too. --untracked-files=all beats a status.showUntrackedFiles=no config.
+	# When git cannot read the folder, nothing is known, so hold it.
+	if porcelain=$(git -C "$wt" status --porcelain --untracked-files=all --ignored=matching \
+		--ignore-submodules=none 2>/dev/null); then
+		wip=$(printf '%s\n' "$porcelain" | grep -cvE '^(\?\?|!!) |^$')
+		untracked=$(printf '%s\n' "$porcelain" | grep -c '^?? ')
+		ignored=$(printf '%s\n' "$porcelain" | grep -c '^!! ')
+		dirty=""
+		[ "$wip" -gt 0 ] && dirty="wip:$wip"
+		[ "$untracked" -gt 0 ] && dirty="${dirty:+$dirty,}untracked:$untracked"
+		[ "$ignored" -gt 0 ] && dirty="${dirty:+$dirty,}ignored:$ignored"
+		[ -z "$dirty" ] && dirty=clean
+	else dirty=unknown; fi
 
 	branch=$(git -C "$wt" symbolic-ref --quiet --short HEAD 2>/dev/null || echo "")
 	if [ -z "$branch" ]; then remote=detached
 	elif git -C "$wt" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-		[ "$(git -C "$wt" rev-parse "origin/$branch" 2>/dev/null)" = "$head" ] \
-			&& remote=pushed \
-			|| remote="ahead$(git -C "$wt" rev-list --count "origin/$branch..HEAD" 2>/dev/null)"
+		ahead=$(git -C "$wt" rev-list --count "origin/$branch..HEAD" 2>/dev/null)
+		if [ "$(git -C "$wt" rev-parse "origin/$branch" 2>/dev/null)" = "$head" ]; then remote=pushed
+		elif [ "$ahead" = 0 ]; then remote=behind
+		else remote="ahead$ahead"; fi
 	else remote=no-remote; fi
 
 	pr=$([ -n "$branch" ] && jq -r --arg b "$branch" \
@@ -84,11 +96,23 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
 	fi
 	recent=$([ "$last_ts" -gt 0 ] 2>/dev/null && [ $(( (now - last_ts) / 86400 )) -le 4 ] && echo yes || echo no)
 
-	case "$dirty" in wip:*) bucket=hold-wip ;; *)
-		case "$pr" in *OPEN*) bucket=hold-open-pr ;; *)
-			if [ "$recent" = yes ]; then bucket=verify-recent-chat
-			elif [ "$merged" = YES ] || [ "$pr" != "-" ]; then bucket=safe
-			else bucket=review; fi ;;
+	# Only ancestry of origin/main, or a MERGED PR whose head is this exact
+	# commit, proves the work lives elsewhere. A CLOSED PR proves nothing, and
+	# commits ahead of the remote, on no remote branch, or detached off main
+	# exist only here.
+	pr_merged=$([ -n "$branch" ] && [ -n "$head" ] && jq -r --arg b "$branch" --arg h "$head" \
+		'any(.[]; .headRefName==$b and .state=="MERGED" and .headRefOid==$h)' "$prs" 2>/dev/null)
+	case "$remote" in ahead*|no-remote|detached) unpushed=yes ;; *) unpushed=no ;; esac
+	[ "$merged" = YES ] && unpushed=no
+
+	case "$dirty" in wip:*|unknown) bucket=hold-wip ;; *)
+		case "$dirty" in *untracked:*|*ignored:*) bucket=hold-local ;; *)
+			case "$pr" in *OPEN*) bucket=hold-open-pr ;; *)
+				if [ "$unpushed" = yes ]; then bucket=hold-unpushed
+				elif [ "$recent" = yes ]; then bucket=verify-recent-chat
+				elif [ "$merged" = YES ] || [ "$pr_merged" = true ]; then bucket=safe
+				else bucket=review; fi ;;
+			esac ;;
 		esac ;;
 	esac
 

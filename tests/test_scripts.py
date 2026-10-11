@@ -1,4 +1,4 @@
-"""Runs the bundled bun scripts' own tests (watch-pr, orch) on a clean copy of the build."""
+"""Runs the bundled bun scripts' own tests and strict type check (watch-pr, orch) on a clean copy of the build."""
 from __future__ import annotations
 
 import shutil
@@ -23,6 +23,8 @@ class BundledScriptsTest(unittest.TestCase):
             run = subprocess.run(["bun", "test"], cwd=copy, capture_output=True, text=True, timeout=300)
             self.assertEqual(run.returncode, 0, run.stdout[-3000:] + run.stderr[-3000:])
             self.assertIn(" 0 fail", run.stdout + run.stderr)
+            types = subprocess.run(["bun", "run", "typecheck"], cwd=copy, capture_output=True, text=True, timeout=300)
+            self.assertEqual(types.returncode, 0, types.stdout[-3000:] + types.stderr[-3000:])
 
     def test_check_plan_runs_on_plain_node(self):
         node = shutil.which("node")

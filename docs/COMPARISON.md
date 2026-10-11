@@ -27,13 +27,14 @@ Checked on **2026-10-11** against each repo's default branch. Every cell comes f
 | Launched T3 threads start from a commit SHA | — | ✅ | ⚠️ from a branch name | ⚠️ not specified | ⚠️ not specified | — |
 | A merge wait has a heartbeat (a merge never wakes a T3 watch) | — | ✅ | ✅ | ⚠️ waits for a merge wake (`shipping.md:14`) | ⚠️ same as waffle | — |
 | Upstream update: sync script, per-file drift check, CI | — | ✅ weekly upstream PR that lists what to port | ⚠️ 2 rewritten files not drift-checked | ❌ | ❌ | ✅ |
-| Tests | 52 pass | 50 pass | 1,931 (suite over 3 min, not run) | 21 pass, 1 skip | none | 1,187 pass, 40 skip |
+| Fixes upstream's open bugs: [#449](https://github.com/cursor/plugins/issues/449) deletes untracked and ignored files, [#470](https://github.com/cursor/plugins/issues/470) calls closed-PR or unpushed work safe, [#471](https://github.com/cursor/plugins/issues/471) reads only 100 review threads | ❌ all 3 open | ✅ all 3, with tests (`tests/test_worktree_audit.py`, `watch-pr/github.test.ts`) | ❌ all 3 present (`t3/overrides/poteto-mode/scripts/worktree-audit.sh:401`, `playbooks/worktree-cleanup.md:11`, `watch-pr/github.ts`) | ❌ #449 and #470 present (`worktree-audit.sh:116`, `worktree-cleanup.md:9`); no watch-pr | ❌ #449 present (`worktree-cleanup.md:9`); no audit script or watch-pr | ⚠️ #470 and #471 fixed; #449 half: untracked files are held, but ignored files are not checked and the playbook still uses `--force` and `rm -rf` (`worktree-cleanup.md:9`) |
+| Tests | 52 pass | 53 pass | 1,931 (suite over 3 min, not run) | 21 pass, 1 skip | none | 1,187 pass, 40 skip |
 | Uninstall | Cursor's plugin manager | ✅ `./uninstall.sh` | ✅ | ✅ | ❌ | ✅ `claude plugin uninstall` |
 | Adds scope beyond pstack | — | none | `brigade`, `landing`, light mode, 4 provider harnesses | Codex hooks | none | 3 more runtimes, 8 extra skills |
 
 ## Known gaps in jutsu
 
-- Three open upstream bugs ship unchanged, as they do in every port that keeps upstream's scripts: [#449](https://github.com/cursor/plugins/issues/449) (worktree cleanup treats untracked files as disposable), [#470](https://github.com/cursor/plugins/issues/470) (the worktree audit marks closed, unmerged PRs as safe), [#471](https://github.com/cursor/plugins/issues/471) (`watch-pr` reads only the first 100 review threads). pstack-claude has fixed #449 and #471.
+- `watch-pr` reading past 100 review threads is tested with fake GitHub pages, not on a real PR that has more than 100 threads.
 - Worktree isolation is a rule in each brief, not something T3 enforces. pstack-t3 works the same way.
 - The live tests in [TESTED.md](TESTED.md) were run by hand. The automated tests cover the build, checks, mode hook, installer, and bundled scripts, not whole playbooks.
 - New repo: no stars, forks, or outside issues yet.

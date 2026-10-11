@@ -74,11 +74,13 @@ class CheckerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             plugin = build_to(tmp)
             bad = plugin / "skills" / "how" / "SKILL.md"
-            bad.write_text(bad.read_text() + "\nUse `Task` with generalPurpose. See [x](missing.md) and `t3_thread_create`. {{plugin}}\n")
+            bad.write_text(bad.read_text() + "\nUse `Task` with generalPurpose. See [x](missing.md) and `t3_thread_create`. {{plugin}}\n"
+                           "Then `git worktree remove --force <path>` and `rm -rf` what is left.\n")
             (plugin / "hooks" / "jutsu-mode").chmod(0o644)
             text = "\n".join(check.check(plugin))
             for needle in ("'`Task`'", "'generalPurpose'", "link does not resolve: missing.md",
-                           "not a T3 tool: t3_thread_create", "'{{plugin}}'", "missing or not executable"):
+                           "not a T3 tool: t3_thread_create", "'{{plugin}}'", "missing or not executable",
+                           "'worktree remove --force'", "'rm -rf'"):
                 self.assertIn(needle, text)
 
 

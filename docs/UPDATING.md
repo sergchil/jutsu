@@ -6,6 +6,18 @@ jutsu keeps poteto's pstack byte for byte in `vendor/pstack/`. Everything Claude
 
 `.github/workflows/upstream.yml` runs every Monday (or on demand from the Actions tab). When upstream changed, it opens a pull request on branch `upstream/pstack` with the new `vendor/` and a body that lists every item to port. The CI check on that pull request stays red until the list is done.
 
+## Upstream bugs fixed here
+
+These overrides carry fixes for bugs that are still open upstream. When a sync flags one of these files, check whether upstream merged its fix. If it did, drop our copy of the fix from the override (or delete the override when nothing else is left in it), then relock.
+
+| Upstream issue | Upstream fix | Override files under `port/overrides/skills/poteto-mode/` |
+|---|---|---|
+| [#449](https://github.com/cursor/plugins/issues/449): untracked and ignored files are deleted | none open | `scripts/worktree-audit.sh`, `playbooks/worktree-cleanup.md` |
+| [#470](https://github.com/cursor/plugins/issues/470): closed-PR or unpushed work is called safe | [#492](https://github.com/cursor/plugins/pull/492) | the same two files |
+| [#471](https://github.com/cursor/plugins/issues/471): only 100 review threads are read | [#484](https://github.com/cursor/plugins/pull/484), plus a stuck-cursor guard | `scripts/watch-pr/` `github.ts`, `policy.ts`, `types.ts` and their tests |
+
+`tests/test_worktree_audit.py` and `watch-pr/github.test.ts` pin the fixed behavior, and `tools/check.py` rejects `worktree remove --force` and `rm -rf` in any playbook, so an upstream change cannot bring a bug back silently.
+
 ## By hand
 
 ```sh

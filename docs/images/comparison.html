@@ -1,0 +1,79 @@
+<!-- Source of comparison.png. Keep its rows in step with docs/COMPARISON.md.
+     Render: screenshot the .card element at deviceScaleFactor 2 (Playwright or headless Chrome),
+     then resize to 1600 px wide. -->
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1600px; background: #0b0b10; font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif; color: #e8e8ef; }
+  .card { margin: 0; padding: 0 0 36px; background: #0b0b10; }
+  .hero { position: relative; height: 220px; overflow: hidden;
+          background: linear-gradient(100deg, #ff6a2b 0%, #f0436f 45%, #9b3cf0 100%); }
+  .hero img { position: absolute; right: 0; top: 0; height: 100%; object-fit: cover; object-position: right center;
+              -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 35%); mask-image: linear-gradient(90deg, transparent 0%, #000 35%); }
+  .hero .txt { position: absolute; left: 56px; top: 44px; }
+  .hero h1 { font-size: 64px; font-weight: 800; letter-spacing: -1.5px; color: #fff; }
+  .hero p { margin-top: 10px; font-size: 26px; color: rgba(255,255,255,.92); font-weight: 500; }
+  table { margin: 32px 40px 0; width: calc(100% - 80px); border-collapse: separate; border-spacing: 0; font-size: 21px; }
+  th, td { padding: 16px 14px; text-align: center; border-bottom: 1px solid #23232e; }
+  th { font-size: 22px; font-weight: 700; color: #fff; padding-bottom: 6px; border-bottom: none; }
+  th small { display: block; font-size: 15px; font-weight: 500; color: #8b8ba0; margin-top: 4px; padding-bottom: 12px; }
+  td:first-child, th:first-child { text-align: left; color: #c9c9d6; font-weight: 500; width: 430px; padding-left: 20px; }
+  .j { background: rgba(240, 67, 111, .10); }
+  th.j { background: linear-gradient(180deg, #f0436f, #b83cf0); border-radius: 18px 18px 0 0; }
+  th.j small { color: rgba(255,255,255,.85); }
+  tr:last-child td.j { border-radius: 0 0 18px 18px; }
+  td.j { border-left: 2px solid rgba(240,67,111,.55); border-right: 2px solid rgba(240,67,111,.55); color: #fff; font-weight: 600; }
+  tr:last-child td.j { border-bottom: 2px solid rgba(240,67,111,.55); }
+  .b { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; font-size: 22px; font-weight: 800; }
+  .y { background: #16351f; color: #3ee07a; }
+  .p { background: #3a2e10; color: #ffc53d; }
+  .n { background: #3a1518; color: #ff5c6c; }
+  .x { color: #5c5c70; font-size: 26px; }
+  .t { font-size: 19px; color: #c9c9d6; }
+  td.j .t { color: #fff; }
+  .foot { display: flex; justify-content: space-between; align-items: center; margin: 26px 56px 0; font-size: 19px; color: #8b8ba0; }
+  .legend span { margin-right: 22px; display: inline-flex; align-items: center; gap: 8px; }
+  .legend .b { width: 28px; height: 28px; font-size: 16px; }
+  .url { color: #fff; font-weight: 700; font-size: 22px; }
+</style></head>
+<body><div class="card">
+  <div class="hero">
+    <img src="header.jpg">
+    <div class="txt">
+      <h1>jutsu vs other pstack ports</h1>
+      <p>poteto's pstack, ported to Claude Code inside T3 Code · checked 2026-10-11</p>
+    </div>
+  </div>
+  <table id="tbl"></table>
+  <div class="foot">
+    <div class="legend">
+      <span><i class="b y">✓</i>yes</span><span><i class="b p">~</i>partly</span><span><i class="b n">✗</i>no</span><span><i class="x">—</i>not a goal</span>
+    </div>
+    <div class="url">github.com/sergchil/jutsu</div>
+  </div>
+</div>
+<script>
+const cols = [["jutsu","sergchil"],["pstack","original · Cursor"],["pstack-t3","creedants"],["p3-stack","waffleflopper"],["p3-stack","uzairansaruzi"],["pstack-claude","michael-denyer"]];
+const rows = [
+ ["Runs in", "t:Claude in T3","t:Cursor","t:T3, 4 providers","t:T3: Claude, Codex","t:T3","t:Claude Code, Codex, Pi, Copilot"],
+ ["pstack version", "t:0.15.17","t:0.15.17","t:0.15.17","t:0.15.15","t:~0.15.10","t:0.15.15"],
+ ["Claude in T3 finds the skills", "y","x","p","y","n","y"],
+ ["Mode stays on (turns, compaction, fork)", "y","y","n","p","n","p"],
+ ["Router reaches the other skills", "y","x","y","n","n","y"],
+ ["Uses T3 threads, PR watch, schedules", "y","x","y","y","y","x"],
+ ["Each parallel writer in its own worktree", "y","y","y","n","n","y"],
+ ["Safe T3 launches (SHA base, retry keys, merge heartbeat)", "y","x","p","n","n","x"],
+ ["Upstream sync with drift check + CI", "y","x","p","n","n","y"],
+ ["Fixes upstream's 3 open bugs (#449, #470, #471)", "y","n","n","n","n","p"],
+ ["Tests passing", "t:53","t:52","t:1,931 (not run)","t:21","t:none","t:1,187"],
+ ["Uninstall", "y","t:Cursor","y","y","n","y"],
+];
+const sym = {y:'<i class="b y">✓</i>', p:'<i class="b p">~</i>', n:'<i class="b n">✗</i>', x:'<i class="x">—</i>'};
+let h = '<tr><th></th>' + cols.map((c,i)=>`<th class="${i==0?'j':''}">${c[0]}<small>${c[1]}</small></th>`).join('') + '</tr>';
+for (const r of rows) {
+  h += `<tr><td>${r[0]}</td>` + r.slice(1).map((v,i)=>`<td class="${i==0?'j':''}">${v.startsWith('t:')?`<span class="t">${v.slice(2)}</span>`:sym[v]}</td>`).join('') + '</tr>';
+}
+document.getElementById('tbl').innerHTML = h;
+</script>
+</body></html>

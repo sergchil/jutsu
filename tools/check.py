@@ -51,6 +51,9 @@ DENY = [
     (r"readonly strips MCP", ()),
     (r"readonly: true", (RUNTIME,)),
     (r"\{\{plugin\}\}", ()),
+    # Deleting a worktree by force or by hand loses untracked and ignored files
+    # (cursor/plugins#449). A plain `git worktree remove` that refuses is the stop.
+    (r"worktree remove (?:--force|-f)\b|\brm -rf\b", ()),
 ]
 
 LINK = re.compile(r"\]\(([^)\s#]+)(#[^)]*)?\)")
@@ -119,7 +122,7 @@ def check(plugin: Path) -> list[str]:
                 continue
             for hit in re.finditer(pattern, text):
                 line = text.count("\n", 0, hit.start()) + 1
-                errors.append(f"{r}:{line}: Cursor-only or unresolved text: {hit.group(0)!r}")
+                errors.append(f"{r}:{line}: Cursor-only, unresolved, or unsafe text: {hit.group(0)!r}")
         for hit in LINK.finditer(text):
             target = hit.group(1)
             if re.match(r"[a-z]+:", target):
