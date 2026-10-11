@@ -1,6 +1,6 @@
 ---
-name: p3
-description: Turn on poteto mode, pstack's rigorous playbook router, for this session. Type /p3 then your task, or /p3 off.
+name: jutsu
+description: Turn on poteto mode, pstack's rigorous playbook router, for this session. Type /jutsu then your task, or /jutsu off.
 disable-model-invocation: true
 ---
 

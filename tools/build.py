@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the p3 plugin from the vendored upstream pstack plus the port overlay.
+"""Build the jutsu plugin from the vendored upstream pstack plus the port overlay.
 
     python3 tools/build.py            # write plugin/
     python3 tools/build.py --check    # exit 1 if plugin/ is stale
@@ -141,21 +141,21 @@ def apply_subs(out_rel: str, text: str, compiled: list) -> str:
 
 
 def bare_command_pattern(names) -> "re.Pattern[str]":
-    """A /<skill> command written the upstream (Cursor) way. Not a path, URL, or /p3:<skill>."""
+    """A /<skill> command written the upstream (Cursor) way. Not a path, URL, or /jutsu:<skill>."""
     return re.compile(r"(?<![\w:/.\-~$])/(" + "|".join(map(re.escape, sorted(names, key=len, reverse=True)))
                       + r")(?![\w/-]|\.\w)")
 
 
 def name_commands(text: str, pattern) -> str:
-    """Skill commands run as /p3:<name> in this plugin."""
-    return pattern.sub(r"/p3:\1", text)
+    """Skill commands run as /jutsu:<name> in this plugin."""
+    return pattern.sub(r"/jutsu:\1", text)
 
 
-P3_TOKEN = re.compile(r"\{\{p3\}\}")
+PLUGIN_TOKEN = re.compile(r"\{\{plugin\}\}")
 
 
-def resolve_p3_token(out_rel: str, text: str) -> str:
-    """Replace {{p3}} with the relative path from this file's directory to the plugin root.
+def resolve_plugin_token(out_rel: str, text: str) -> str:
+    """Replace {{plugin}} with the relative path from this file's directory to the plugin root.
 
     Content files are read by the model by path, so links stay relative to the file
     being read, the way upstream writes them. Agent bodies are system prompts, not
@@ -163,7 +163,7 @@ def resolve_p3_token(out_rel: str, text: str) -> str:
     """
     depth = out_rel.count("/")
     rel = "/".join([".."] * depth) if depth else "."
-    return P3_TOKEN.sub(rel, text)
+    return PLUGIN_TOKEN.sub(rel, text)
 
 
 def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
@@ -240,7 +240,7 @@ def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
             continue
         path = out_dir / out_rel
         text = path.read_text(encoding="utf-8")
-        resolved = name_commands(resolve_p3_token(out_rel, text), commands)
+        resolved = name_commands(resolve_plugin_token(out_rel, text), commands)
         if resolved != text:
             path.write_text(resolved, encoding="utf-8")
 
@@ -305,7 +305,7 @@ def main() -> int:
             return 1
         print(f"built {out}. " + " ".join(notes))
         return 0
-    with tempfile.TemporaryDirectory(prefix="p3build-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="jutsu-build-") as tmp:
         tmp_out = Path(tmp) / "plugin"
         tmp_out.mkdir()
         try:

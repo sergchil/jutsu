@@ -1,11 +1,11 @@
 #!/bin/sh
-# p3 mode hook. Keeps poteto mode on for a session once the user runs /p3, the way
+# jutsu mode hook. Keeps poteto mode on for a session once the user runs /jutsu, the way
 # Cursor's Custom Mode keeps it on, and re-points the model at the router after a
 # compaction or resume.
 #
-#   p3-mode expand   UserPromptExpansion: /p3 or /p3:poteto-mode turns the mode on, "off" turns it off
-#   p3-mode prompt   UserPromptSubmit: one-line reminder while the mode is on
-#   p3-mode start    SessionStart: after compact, reread the router; after resume or fork, a one-line
+#   jutsu-mode expand   UserPromptExpansion: /jutsu or /jutsu:poteto-mode turns the mode on, "off" turns it off
+#   jutsu-mode prompt   UserPromptSubmit: one-line reminder while the mode is on
+#   jutsu-mode start    SessionStart: after compact, reread the router; after resume or fork, a one-line
 #                    reminder. A fork has a new session id, so the state is restored from its history.
 #
 # It never blocks: every path exits 0, and it prints nothing it cannot stand behind.
@@ -33,7 +33,7 @@ router="$root/skills/poteto-mode/SKILL.md"
 recover() {
   transcript=$(field transcript_path)
   [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
-  last=$(grep -oE '<command-name>/p3(:poteto-mode)?</command-name>(\\n<command-args>[^<]{0,12})?' "$transcript" 2>/dev/null | tail -n 1)
+  last=$(grep -oE '<command-name>/jutsu(:poteto-mode)?</command-name>(\\n<command-args>[^<]{0,12})?' "$transcript" 2>/dev/null | tail -n 1)
   [ -n "$last" ] || return 1
   args=$(printf '%s' "$last" | sed -n 's/.*<command-args>//p' | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
   [ "$args" = "off" ] && return 1
@@ -45,7 +45,7 @@ case "$event" in
     [ -z "$(field agent_id)" ] || exit 0
     name=$(field command_name)
     case "$name" in
-      p3|p3:poteto-mode) ;;
+      jutsu|jutsu:poteto-mode) ;;
       *) exit 0 ;;
     esac
     args=$(field command_args | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
@@ -59,21 +59,21 @@ case "$event" in
     ;;
   prompt)
     [ -f "$state" ] || exit 0
-    printf '%s\n' "p3 poteto mode is on in this session. New task? Playbook match or rigor needed -> apply poteto mode (router: $router). Casual turn or user opts out -> don't."
+    printf '%s\n' "jutsu poteto mode is on in this session. New task? Playbook match or rigor needed -> apply poteto mode (router: $router). Casual turn or user opts out -> don't."
     ;;
   start)
     source=$(field source)
     if [ ! -f "$state" ]; then
       # A fork or a lost state file starts without state. Restore it when the
-      # last /p3 command in this session's history did not turn the mode off.
+      # last /jutsu command in this session's history did not turn the mode off.
       case "$source" in resume|fork|compact) recover || exit 0 ;; *) exit 0 ;; esac
     fi
     case "$source" in
       compact)
-        printf '%s\n' "p3 poteto mode is on in this session. Context was compacted, so the router may be cut off. Reread $router in full before the next step, and reread the matched playbook file."
+        printf '%s\n' "jutsu poteto mode is on in this session. Context was compacted, so the router may be cut off. Reread $router in full before the next step, and reread the matched playbook file."
         ;;
       resume|fork)
-        printf '%s\n' "p3 poteto mode is on in this session (router: $router)."
+        printf '%s\n' "jutsu poteto mode is on in this session (router: $router)."
         ;;
     esac
     ;;

@@ -1,6 +1,6 @@
 # Porting guide
 
-How p3-stack turns upstream pstack (Cursor) into a Claude Code plugin that runs well inside T3 Code. Every override follows these rules.
+How jutsu turns upstream pstack (Cursor) into a Claude Code plugin that runs well inside T3 Code. Every override follows these rules.
 
 ## Layout
 
@@ -8,7 +8,7 @@ How p3-stack turns upstream pstack (Cursor) into a Claude Code plugin that runs 
 - `port/spec.json` maps paths, drops Cursor-only frontmatter, and sets which skills the model may invoke.
 - `port/substitutions.json` holds mechanical rewrites for files that need only small changes. Every rule must match at least once, or the build fails.
 - `port/overrides/<plugin path>` replaces a whole file. `port/overrides.lock.json` pins the upstream file each override was merged against. When upstream changes, the build fails until the override is re-merged and `tools/build.py --relock` runs.
-- `port/added/<plugin path>` holds files upstream does not have (the runtime, hooks, the `/p3` alias, the manifest).
+- `port/added/<plugin path>` holds files upstream does not have (the runtime, hooks, the `/jutsu` alias, the manifest).
 - `plugin/` is generated. Never edit it by hand.
 
 ## Rules for an override
@@ -18,10 +18,10 @@ How p3-stack turns upstream pstack (Cursor) into a Claude Code plugin that runs 
    - a verified Claude Code or T3 behavior in `plugin/skills/poteto-mode/references/runtime.md` makes it wrong;
    - a lesson in the list below.
    Never add policy of your own. Never drop a step. Keep step numbers, because other files cite them.
-2. **Mechanisms come from the runtime.** Name the exact tool and parameters the runtime names. Link the runtime section instead of repeating it: from a playbook, `../references/runtime.md#subagents`; from anywhere else, `{{p3}}/skills/poteto-mode/references/runtime.md#subagents`. When a step needs a T3-only tool, say what to do without it in the same step or link the runtime row that says it.
-3. **Skills and principles are files.** Every p3 skill has `disable-model-invocation: true`, so it is not in the model's skill list. On the first mention of another skill in a file, give its path: the **how** skill (`{{p3}}/skills/how/SKILL.md`). Principles: `{{p3}}/principles/principle-<name>.md`. The build replaces `{{p3}}` with the relative path from the file to the plugin root. Do not use `{{p3}}` in `agents/*.md`.
+2. **Mechanisms come from the runtime.** Name the exact tool and parameters the runtime names. Link the runtime section instead of repeating it: from a playbook, `../references/runtime.md#subagents`; from anywhere else, `{{plugin}}/skills/poteto-mode/references/runtime.md#subagents`. When a step needs a T3-only tool, say what to do without it in the same step or link the runtime row that says it.
+3. **Skills and principles are files.** Every jutsu skill has `disable-model-invocation: true`, so it is not in the model's skill list. On the first mention of another skill in a file, give its path: the **how** skill (`{{plugin}}/skills/how/SKILL.md`). Principles: `{{plugin}}/principles/principle-<name>.md`. The build replaces `{{plugin}}` with the relative path from the file to the plugin root. Do not use `{{plugin}}` in `agents/*.md`.
 4. **Subagents.** Cursor `Task` becomes the `Agent` tool: `subagent_type`, `model` (alias `opus`, `sonnet`, `fable`, `haiku` only), `effort` (`low` to `max`), `run_in_background`. Models come from the role names in the runtime's Roles section. Cursor's slug-fallback rules (the Task error's valid-slug list) are dropped. A `readonly: true` child becomes a read-only brief, plus `subagent_type: "Explore"` when it only reads code. Cursor's "readonly strips MCP" caveat is dropped.
-5. **Names.** `/poteto-mode` becomes `/p3`. Other skills become `/p3:<name>`. `poteto-agent` becomes `p3:poteto-agent`. `Comment Sicko` becomes `p3:comment-sicko`. The models file is `p3-models.md`, written by `/p3:setup-pstack`. Generated project skills go to `.claude/skills/`, personal ones to `$CLAUDE_CONFIG_DIR/skills/` (default `~/.claude/skills/`).
+5. **Names.** `/poteto-mode` becomes `/jutsu`. Other skills become `/jutsu:<name>`. `poteto-agent` becomes `jutsu:poteto-agent`. `Comment Sicko` becomes `jutsu:comment-sicko`. The models file is `jutsu-models.md`, written by `/jutsu:setup-pstack`. Generated project skills go to `.claude/skills/`, personal ones to `$CLAUDE_CONFIG_DIR/skills/` (default `~/.claude/skills/`).
 6. **Style.** Upstream's prose rules: short declarative sentences, no long dash, no colon as a mid-sentence connector, no fabricated links.
 
 ## Lessons to encode
@@ -55,11 +55,11 @@ Each one comes from a real run of a port, or from T3's source. Put each where it
 25. A launched thread is a new session where poteto mode is off. Its brief opens with the router's absolute path.
 26. In plan mode, Claude calls `ExitPlanMode`. T3 builds its plan card from that call and denies it.
 27. Todo tools are off on current Claude models by default, so the `.audit/` file fallback is the normal path.
-28. Keep `.p3/` and `.audit/` out of git through `git rev-parse --git-path info/exclude`. In a worktree `.git` is a file.
+28. Keep `.jutsu/` and `.audit/` out of git through `git rev-parse --git-path info/exclude`. In a worktree `.git` is a file.
 29. The default effort is `xhigh`, as upstream runs. `setup-pstack`'s example table must equal the runtime's Roles (a test checks it).
 30. A launched T3 thread starts from a commit SHA. T3 names a new worktree's branch `t3/<hash>` and renames it in the background, so a branch name read from T3 can vanish before the launch runs ("Workspace preparation failed"). Read back each launched thread within a minute.
-31. Keep upstream's bare `/<skill>` commands. The build rewrites them to `/p3:<skill>`, so new upstream skills need no edit for naming.
-32. A fork (T3's thread fork) has a new session id. The mode hook restores poteto mode from the last `/p3` command in the transcript on `fork`, `resume`, and `compact`.
+31. Keep upstream's bare `/<skill>` commands. The build rewrites them to `/jutsu:<skill>`, so new upstream skills need no edit for naming.
+32. A fork (T3's thread fork) has a new session id. The mode hook restores poteto mode from the last `/jutsu` command in the transcript on `fork`, `resume`, and `compact`.
 
 ## Tests
 

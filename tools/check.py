@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Static checks on a built p3 plugin tree.
+"""Static checks on a built jutsu plugin tree.
 
     python3 tools/check.py [PLUGIN_DIR]     # default: plugin/
 
 Each check encodes a bug found in an earlier pstack port or in T3's source:
 frontmatter that Claude Code rejects or misreads, links that do not resolve,
-unresolved {{p3}} tokens, Cursor-only mechanisms left in prose, T3 tool names
+unresolved {{plugin}} tokens, Cursor-only mechanisms left in prose, T3 tool names
 that do not exist, and hooks that point at missing or non-executable files.
 Python 3.9+, stdlib only.
 """
@@ -50,7 +50,7 @@ DENY = [
     (r"`Task`|\bTask tool\b|\bTask call", (RUNTIME,)),
     (r"readonly strips MCP", ()),
     (r"readonly: true", (RUNTIME,)),
-    (r"\{\{p3\}\}", ()),
+    (r"\{\{plugin\}\}", ()),
 ]
 
 LINK = re.compile(r"\]\(([^)\s#]+)(#[^)]*)?\)")
@@ -77,8 +77,8 @@ def check(plugin: Path) -> list[str]:
     manifest = plugin / ".claude-plugin" / "plugin.json"
     try:
         m = json.loads(manifest.read_text())
-        if m.get("name") != "p3":
-            errors.append("plugin.json: name must be p3")
+        if m.get("name") != "jutsu":
+            errors.append("plugin.json: name must be jutsu")
         for a in m.get("agents", []):
             if not (plugin / a).is_file():
                 errors.append(f"plugin.json: agent {a} does not exist")
@@ -98,10 +98,10 @@ def check(plugin: Path) -> list[str]:
         if desc.startswith("`"):
             errors.append(f"{rel(skill)}: a description starting with a backtick must be quoted")
         if fm.get("disable-model-invocation") != "true":
-            errors.append(f"{rel(skill)}: p3 skills are user-invoked (disable-model-invocation: true)")
+            errors.append(f"{rel(skill)}: jutsu skills are user-invoked (disable-model-invocation: true)")
     root = frontmatter((plugin / "SKILL.md").read_text()) if (plugin / "SKILL.md").exists() else {}
-    if root.get("name") != "p3":
-        errors.append("SKILL.md: the root alias must be named p3")
+    if root.get("name") != "jutsu":
+        errors.append("SKILL.md: the root alias must be named jutsu")
 
     for agent in sorted(plugin.glob("agents/*.md")):
         fm = frontmatter(agent.read_text())
@@ -144,7 +144,7 @@ def check(plugin: Path) -> list[str]:
                 line = text.count("\n", 0, hit.start()) + 1
                 errors.append(f"{r}:{line}: not a T3 tool: {name}")
 
-    # Skill commands are /p3:<name> in this plugin. A bare /<name> is upstream's Cursor
+    # Skill commands are /jutsu:<name> in this plugin. A bare /<name> is upstream's Cursor
     # naming and does not run here.
     names = sorted(d.name for d in plugin.glob("skills/*") if d.is_dir())
     bare = re.compile(r"(?<![\w:/.\-~$])/(" + "|".join(map(re.escape, sorted(names, key=len, reverse=True)))
@@ -154,7 +154,7 @@ def check(plugin: Path) -> list[str]:
             text = md.read_text()
             for hit in bare.finditer(text):
                 line = text.count("\n", 0, hit.start()) + 1
-                errors.append(f"{rel(md)}:{line}: bare skill command /{hit.group(1)}; use /p3:{hit.group(1)}")
+                errors.append(f"{rel(md)}:{line}: bare skill command /{hit.group(1)}; use /jutsu:{hit.group(1)}")
 
     hooks = plugin / "hooks" / "hooks.json"
     try:
@@ -173,7 +173,7 @@ def check(plugin: Path) -> list[str]:
     except (OSError, ValueError, KeyError, TypeError) as exc:
         errors.append(f"hooks/hooks.json: {exc}")
 
-    for script in [p for p in plugin.rglob("*.sh") if "node_modules" not in p.parts] + [plugin / "hooks" / "p3-mode"]:
+    for script in [p for p in plugin.rglob("*.sh") if "node_modules" not in p.parts] + [plugin / "hooks" / "jutsu-mode"]:
         if script.exists() and not os.access(script, os.X_OK):
             errors.append(f"{rel(script)}: not executable")
     return errors

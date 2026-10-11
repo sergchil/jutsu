@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Mine the current conversation for durable learnings, then route them into skill edits.
 
-Invoke when the user says "reflect" or "/p3:reflect". Skip when the conversation is trivial, off-topic, or already covered by an existing skill the parent followed correctly. One-offs are not learnings.
+Invoke when the user says "reflect" or "/jutsu:reflect". Skip when the conversation is trivial, off-topic, or already covered by an existing skill the parent followed correctly. One-offs are not learnings.
 
 ## 1. Locate the active transcript
 
@@ -24,7 +24,7 @@ That covers the session (`<id>.jsonl`) and subagent (`<id>/subagents/agent-<chil
 
 One message, three `Agent` calls, `subagent_type: "general-purpose"`. Reviewers need MCP access to look up the tickets, chat threads, and observability traces the transcript references. The templates forbid writes.
 
-Each reviewer and the synthesizer name a role line in `p3-models.md` and its default in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). Set `model` and `effort` from that line, or from the default if the file or the line is missing. Reviewers and the synthesizer never run below `high` effort, so raise a lower value to `high`. Omit both when the value is `inherit`. If the `Agent` tool rejects a value, use the default and say so. A line that names a T3 target runs that spawn through `delegate_task` per [the runtime's Subagents](../../skills/poteto-mode/references/runtime.md#subagents). Pass `options` with `effort` on every call and a distinct `clientRequestId` per call, and read the result with `task_status` after the wake.
+Each reviewer and the synthesizer name a role line in `jutsu-models.md` and its default in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). Set `model` and `effort` from that line, or from the default if the file or the line is missing. Reviewers and the synthesizer never run below `high` effort, so raise a lower value to `high`. Omit both when the value is `inherit`. If the `Agent` tool rejects a value, use the default and say so. A line that names a T3 target runs that spawn through `delegate_task` per [the runtime's Subagents](../../skills/poteto-mode/references/runtime.md#subagents). Pass `options` with `effort` on every call and a distinct `clientRequestId` per call, and read the result with `task_status` after the wake.
 
 | Lens | Role line | Prompt template |
 |---|---|---|

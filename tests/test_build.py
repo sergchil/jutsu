@@ -46,10 +46,10 @@ class BuildTest(unittest.TestCase):
         self.assertTrue((vendor / ".cursor-plugin" / "plugin.json").exists())
         self.assertTrue((vendor / "skills" / "poteto-mode" / "SKILL.md").read_text().startswith("---\nname: Poteto Mode"))
 
-    def test_p3_token_resolves_relative_to_each_file(self):
-        self.assertEqual(build.resolve_p3_token("SKILL.md", "{{p3}}/x"), "./x")
-        self.assertEqual(build.resolve_p3_token("skills/how/SKILL.md", "{{p3}}/x"), "../../x")
-        self.assertEqual(build.resolve_p3_token("skills/poteto-mode/playbooks/a.md", "{{p3}}/x"), "../../../x")
+    def test_plugin_token_resolves_relative_to_each_file(self):
+        self.assertEqual(build.resolve_plugin_token("SKILL.md", "{{plugin}}/x"), "./x")
+        self.assertEqual(build.resolve_plugin_token("skills/how/SKILL.md", "{{plugin}}/x"), "../../x")
+        self.assertEqual(build.resolve_plugin_token("skills/poteto-mode/playbooks/a.md", "{{plugin}}/x"), "../../../x")
 
     def test_principles_move_out_of_the_skill_list(self):
         spec = build.load_json(build.SPEC)
@@ -74,11 +74,11 @@ class CheckerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             plugin = build_to(tmp)
             bad = plugin / "skills" / "how" / "SKILL.md"
-            bad.write_text(bad.read_text() + "\nUse `Task` with generalPurpose. See [x](missing.md) and `t3_thread_create`. {{p3}}\n")
-            (plugin / "hooks" / "p3-mode").chmod(0o644)
+            bad.write_text(bad.read_text() + "\nUse `Task` with generalPurpose. See [x](missing.md) and `t3_thread_create`. {{plugin}}\n")
+            (plugin / "hooks" / "jutsu-mode").chmod(0o644)
             text = "\n".join(check.check(plugin))
             for needle in ("'`Task`'", "'generalPurpose'", "link does not resolve: missing.md",
-                           "not a T3 tool: t3_thread_create", "'{{p3}}'", "missing or not executable"):
+                           "not a T3 tool: t3_thread_create", "'{{plugin}}'", "missing or not executable"):
                 self.assertIn(needle, text)
 
 
@@ -136,9 +136,9 @@ class PortRulesTest(unittest.TestCase):
     def test_bare_skill_commands_become_plugin_commands(self):
         pattern = build.bare_command_pattern(["how", "bro", "figure-it-out"])
         cases = {
-            "Use /how or /figure-it-out.": "Use /p3:how or /p3:figure-it-out.",
-            "the voice of [`/bro`](../bro/SKILL.md)": "the voice of [`/p3:bro`](../bro/SKILL.md)",
-            "/p3:how stays": "/p3:how stays",
+            "Use /how or /figure-it-out.": "Use /jutsu:how or /jutsu:figure-it-out.",
+            "the voice of [`/bro`](../bro/SKILL.md)": "the voice of [`/jutsu:bro`](../bro/SKILL.md)",
+            "/jutsu:how stays": "/jutsu:how stays",
             "path skills/how/SKILL.md and ~/x/how and https://a.b/how stay": "path skills/how/SKILL.md and ~/x/how and https://a.b/how stay",
             "/how.md and /howl stay": "/how.md and /howl stay",
         }

@@ -1,6 +1,6 @@
 ---
 name: architect
-description: "Sketch types, signatures, and module structure before code, then stay in the loop while implementation fills in. Use for /p3:architect, 'architect this', 'design this', or non-trivial work where jumping to code would lock in the wrong shape."
+description: "Sketch types, signatures, and module structure before code, then stay in the loop while implementation fills in. Use for /jutsu:architect, 'architect this', 'design this', or non-trivial work where jumping to code would lock in the wrong shape."
 disable-model-invocation: true
 ---
 
@@ -28,7 +28,7 @@ Skip Phase A only when the work is genuinely greenfield with no surrounding syst
 
 Run the **arena** skill (`../../skills/arena/SKILL.md`) with the design-sketch task and the Phase A grounding artifacts. Pass `references/runner-prompt.md` as each runner's prompt, by its absolute path, so the links in it resolve.
 
-Take the runners from the `architect runners` line in `p3-models.md`, in place of the `arena runners` line. If the file or that line is missing, use the line's defaults in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). `inherit`, rejected, and T3-target entries follow the runner rules in the **arena** skill's Phase A.
+Take the runners from the `architect runners` line in `jutsu-models.md`, in place of the `arena runners` line. If the file or that line is missing, use the line's defaults in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). `inherit`, rejected, and T3-target entries follow the runner rules in the **arena** skill's Phase A.
 
 Design it twice. Require at least two structurally distinct candidates before synthesis, even when the first looks sufficient. This is the **exhaust-the-design-space** principle (`../../principles/principle-exhaust-the-design-space.md`) made concrete. Whole-shape alternatives, not point fixes inside one shape.
 
@@ -42,7 +42,7 @@ Arena returns one synthesized design package. Its synthesis decision fills the r
 
 Default: proceed directly to implementation with the synthesized design. No human checkpoint.
 
-Opt in to a checkpoint when the invoker explicitly asks: "/p3:architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
+Opt in to a checkpoint when the invoker explicitly asks: "/jutsu:architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
 
 The synthesis can ship as its own commit either way, as the "scaffold first" mode of the **foundational-thinking** principle (`../../principles/principle-foundational-thinking.md`). Planned and scoped breakage during fill-in is fine, per the **outcome-oriented-execution** principle (`../../principles/principle-outcome-oriented-execution.md`). For adversarial pressure on the design before implementing, run the **interrogate** skill (`../../skills/interrogate/SKILL.md`) on the synthesized sketch.
 

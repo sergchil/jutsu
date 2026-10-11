@@ -1,4 +1,4 @@
-# p3 runtime: Claude Code inside T3 Code
+# jutsu runtime: Claude Code inside T3 Code
 
 pstack was written for Cursor. This file says how each Cursor mechanism runs here. Every playbook and skill that spawns, waits, schedules, watches, or proves work on a UI points at a section of this file. Read the section before the step that needs it.
 
@@ -15,7 +15,7 @@ Playbooks keep upstream's words. Read them this way.
 | Playbook says | Here |
 |---|---|
 | `Task`, subagent, "spawn" | The `Agent` tool. See [Subagents](#subagents). |
-| `subagent_type: "poteto-agent"` | `subagent_type: "p3:poteto-agent"`. |
+| `subagent_type: "poteto-agent"` | `subagent_type: "jutsu:poteto-agent"`. |
 | `generalPurpose` | `subagent_type: "general-purpose"`. |
 | `readonly: true` | A read-only brief, plus `subagent_type: "Explore"` when the child only reads code. |
 | `run_in_background: true` | Same parameter on `Agent`. Background is the default. |
@@ -27,7 +27,7 @@ Playbooks keep upstream's words. Read them this way.
 | `scripts/watch-pr` polling | `watch_pull_request` to wake, `watch-pr --status-only` to judge. See [Pull requests](#pull-requests). |
 | transcripts, `agent-transcripts/` | See [History](#history). |
 | `control-ui`, `control-cli`, a simulator skill | See [Proof surfaces](#proof-surfaces). |
-| the agent store | `.p3/<slug>/` in the repo. See [Store](#store). |
+| the agent store | `.jutsu/<slug>/` in the repo. See [Store](#store). |
 | Cursor restart | A T3 restart, a Claude session restart, or compaction. |
 | `/deslop`, `create-skill` | The `deslop` and `skill-authoring` notes in [Missing companions](#missing-companions). |
 | Bugbot, agentic security review | Any review bot. Triage per `bugbot-triage.md`. |
@@ -36,12 +36,12 @@ Playbooks keep upstream's words. Read them this way.
 
 **Default: the native `Agent` tool.** Some tool lists still show it under its old name, `Task`. T3's own system prompt says to prefer native subagents for same-provider work when they support the model. Every Claude model and effort level is reachable natively, so a Claude child is an `Agent` call. T3 shows each one as a child thread.
 
-- `subagent_type`: `p3:poteto-agent` for every child inside a playbook step. Routed skills name their own type, usually `general-purpose` or `Explore`. Keep what the skill names.
+- `subagent_type`: `jutsu:poteto-agent` for every child inside a playbook step. Routed skills name their own type, usually `general-purpose` or `Explore`. Keep what the skill names.
 - `model`: an alias only: `opus`, `sonnet`, `fable`, or `haiku`. The tool rejects full model ids.
 - `effort`: `low`, `medium`, `high`, `xhigh`, or `max`. Pass it on every call that has a role. Without it the child inherits the session effort.
 - `run_in_background`: true unless you need the result before your next step.
 - `name`: set it for any child you may message or stop. `SendMessage` continues a live child.
-- **Brief.** A child gets only its brief. Open every `p3:poteto-agent` brief with the absolute path of the router (`skills/poteto-mode/SKILL.md`, which you know because you read it) and the line `Read it in full before any work.` Then the goal, file pointers instead of pasted context, constraints, and the report format. Never put `$(...)` or backticks that a shell would expand into a brief that a child will paste into a command. Tell every child to run each command in the foreground and never end its turn with a background shell or agent still running, since a Claude child that does can report early. A deadline orders the work; it never waives a step.
+- **Brief.** A child gets only its brief. Open every `jutsu:poteto-agent` brief with the absolute path of the router (`skills/poteto-mode/SKILL.md`, which you know because you read it) and the line `Read it in full before any work.` Then the goal, file pointers instead of pasted context, constraints, and the report format. Never put `$(...)` or backticks that a shell would expand into a brief that a child will paste into a command. Tell every child to run each command in the foreground and never end its turn with a background shell or agent still running, since a Claude child that does can report early. A deadline orders the work; it never waives a step.
 - **Stop what you abandon.** In the agent list `completed` means the completion was notified, not that the process exited. A child with live background work reports completed and keeps writing. Stop it with `TaskStop` (it may be deferred, so load it with `ToolSearch` first) and confirm with `git status` before you give its work to a fresh child.
 - **Drain before landing.** Before a commit, merge, push, or deploy from a worktree, every child that writes there has stopped.
 - **No subagent** has `AskUserQuestion` or `ScheduleWakeup`, so questions and `/loop` stay in this thread. Background children also cannot call `delegate_task` after your turn ends. In T3 (the Agent SDK), a subagent does not wait for its own background children, so their reports arrive in this thread. Drain them here.
@@ -60,12 +60,12 @@ Rules for `delegate_task`:
 - A child's runtime and interaction modes must be equal to or narrower than yours. A broader request fails. It is never clamped.
 - `task_cancel` stops a child and its children. `t3_thread_interrupt` does not.
 - Children share your checkout. See [Isolation](#isolation).
-- Open a `delegate_task` brief for a code or judgment role with the router's absolute path and `Read it in full before any work.`, as for `p3:poteto-agent`. The child is a new session where poteto mode is off.
+- Open a `delegate_task` brief for a code or judgment role with the router's absolute path and `Read it in full before any work.`, as for `jutsu:poteto-agent`. The child is a new session where poteto mode is off.
 - Children never call `watch_pull_request`. T3 refuses a delegated child's watch, and a native subagent's watch lands on your thread.
 
 ## Roles
 
-Role defaults. A role line in `p3-models.md` overrides one. Look for `.claude/p3-models.md` in the repo, then `p3-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). `/p3:setup-pstack` writes it.
+Role defaults. A role line in `jutsu-models.md` overrides one. Look for `.claude/jutsu-models.md` in the repo, then `jutsu-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). `/jutsu:setup-pstack` writes it.
 
 - feature, refactoring: `opus @xhigh`
 - bug-fix: `fable @xhigh`
@@ -85,7 +85,7 @@ Role defaults. A role line in `p3-models.md` overrides one. Look for `.claude/p3
 - architect runners: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
 - interrogate reviewers: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
 
-Upstream runs every role at its model's highest reasoning setting, and so do these defaults. `/p3:setup-pstack` lowers them for a smaller budget.
+Upstream runs every role at its model's highest reasoning setting, and so do these defaults. `/jutsu:setup-pstack` lowers them for a smaller budget.
 
 A value is `<alias> @<effort>`, `inherit` (omit `model` and `effort`), or `t3:<providerInstanceId>/<modelId> @<effort>` for a `delegate_task` target. A value without `@` uses the session effort. An effort a model does not offer falls back to its default, so report the effort the child ran at, not the one you asked for.
 
@@ -155,7 +155,7 @@ Claude Code offers no todo tools on current models (Opus 4.8 and later, Sonnet 5
 
 ## Store
 
-Durable files for a program (Orchestrate's tables, decision logs, resume notes) go under `.p3/<slug>/` at the repo root. The first time, append `.p3/` and `.audit/` to the file that `git rev-parse --git-path info/exclude` prints. In a worktree `.git` is a file, so never write `.git/info/exclude` by hand. Worktree threads see only committed files, so pass a coordinator's store path as an absolute path.
+Durable files for a program (Orchestrate's tables, decision logs, resume notes) go under `.jutsu/<slug>/` at the repo root. The first time, append `.jutsu/` and `.audit/` to the file that `git rev-parse --git-path info/exclude` prints. In a worktree `.git` is a file, so never write `.git/info/exclude` by hand. Worktree threads see only committed files, so pass a coordinator's store path as an absolute path.
 
 ## Missing companions
 

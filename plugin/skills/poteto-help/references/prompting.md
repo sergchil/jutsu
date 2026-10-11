@@ -19,9 +19,9 @@ A prompt states the intent and the check for done. The playbook supplies the ste
 ## Load the context first
 
 - For a noisy report, ask the agent to restate the underlying issue in its own words and in plain English before it does anything else. A misreading shows up before any code exists.
-- In a fresh chat, `/p3:recall` earlier work on the topic. Old chats hold context that the new agent lacks.
-- Before a change to unfamiliar code, ask `/p3:how` for the mechanics and `/p3:why` for the reasons. An agent with no traced model fixes the symptom at the first plausible spot.
-- Ask `/p3:teach` to make the case for a choice, as in "convince me it fixes the cause and not the symptom". A case is easier to check than a summary.
+- In a fresh chat, `/jutsu:recall` earlier work on the topic. Old chats hold context that the new agent lacks.
+- Before a change to unfamiliar code, ask `/jutsu:how` for the mechanics and `/jutsu:why` for the reasons. An agent with no traced model fixes the symptom at the first plausible spot.
+- Ask `/jutsu:teach` to make the case for a choice, as in "convince me it fixes the cause and not the symptom". A case is easier to check than a summary.
 
 ## Design before the plan
 

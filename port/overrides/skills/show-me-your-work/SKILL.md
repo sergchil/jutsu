@@ -33,7 +33,7 @@ ts	phase	decision	why	evidence	result
 
 ## Logging a row
 
-Write each entry the way you'd tell a teammate what you did. Plain words, concrete actions, no AI speak or abstract jargon (the **unslop** skill, `{{p3}}/skills/unslop/SKILL.md`, applies to log text too).
+Write each entry the way you'd tell a teammate what you did. Plain words, concrete actions, no AI speak or abstract jargon (the **unslop** skill, `{{plugin}}/skills/unslop/SKILL.md`, applies to log text too).
 
 Use the helper `scripts/log.sh <logfile> <phase> <decision> <why> <evidence> <result>`. It stamps `ts`, writes the header on first use, strips stray tabs/newlines, and prefixes any cell starting with `=`, `+`, `-`, or `@` with a single quote. A bare `printf` appending a row works too, but mind those same bytes if cells come from generated or user-supplied text.
 
@@ -50,11 +50,11 @@ Commit it only when the work is ambitious enough that a reviewer needs the trail
 ## Rules
 
 - Append-only. A wrong call gets a new row that supersedes it. Never edit or delete history.
-- Prefer evidence produced by committed scripts over hand-made one-offs (the **encode-lessons-in-structure** principle, `{{p3}}/principles/principle-encode-lessons-in-structure.md`).
+- Prefer evidence produced by committed scripts over hand-made one-offs (the **encode-lessons-in-structure** principle, `{{plugin}}/principles/principle-encode-lessons-in-structure.md`).
 
 ## Audit the log against the transcript
 
-At the end of the run, before handing back, check the log told the truth. Read this run's transcript per [the runtime's History]({{p3}}/skills/poteto-mode/references/runtime.md#history). In T3, `t3_thread_list` returns `currentThreadId`, and `t3_thread_read` on it with `view: "activity"` shows what ran. Otherwise read this session's file in `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<dir>/`, where `<dir>` is the workspace path encoded as the runtime's History section says, and skip records with `isMeta` set and local-command records. Don't glob across `projects/*/`. That reads unrelated private chats. Walk this run's rows against what actually happened. Each stretch of them begins at one of this run's `start` rows, or at the first row if this run created the log, and ends at the next `start` row of another run:
+At the end of the run, before handing back, check the log told the truth. Read this run's transcript per [the runtime's History]({{plugin}}/skills/poteto-mode/references/runtime.md#history). In T3, `t3_thread_list` returns `currentThreadId`, and `t3_thread_read` on it with `view: "activity"` shows what ran. Otherwise read this session's file in `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<dir>/`, where `<dir>` is the workspace path encoded as the runtime's History section says, and skip records with `isMeta` set and local-command records. Don't glob across `projects/*/`. That reads unrelated private chats. Walk this run's rows against what actually happened. Each stretch of them begins at one of this run's `start` rows, or at the first row if this run created the log, and ends at the next `start` row of another run:
 
 - Check that every row maps to a real decision or action.
 - Check that each row's evidence resolves and shows what the row claims.

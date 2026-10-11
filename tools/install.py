@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Install p3 into every Claude Code config dir that T3 Code uses.
+"""Install jutsu into every Claude Code config dir that T3 Code uses.
 
-p3 ships as a Claude Code "skills-dir plugin": one symlink, <config>/skills/p3 -> plugin/.
-Claude Code then loads it as p3@skills-dir with its skills, agents, and hooks. Nothing
+jutsu ships as a Claude Code "skills-dir plugin": one symlink, <config>/skills/jutsu -> plugin/.
+Claude Code then loads it as jutsu@skills-dir with its skills, agents, and hooks. Nothing
 else in the config dir is written: no settings.json edits, no marketplace records.
 
-    ./install.sh                 link p3 into each config dir
+    ./install.sh                 link jutsu into each config dir
     ./install.sh --status        show what is linked and what conflicts
-    ./uninstall.sh               remove everything p3 added (same as --uninstall --purge)
-    ./install.sh --uninstall     remove only p3's links
+    ./uninstall.sh               remove everything jutsu added (same as --uninstall --purge)
+    ./install.sh --uninstall     remove only jutsu's links
     ./install.sh --dry-run ...   print the actions only
 
 Config dirs come from T3's provider settings, resolved the way T3 resolves them
@@ -30,9 +30,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PLUGIN = REPO / "plugin"
-LINK_NAME = "p3"
-PLUGIN_NAME = "p3"
-DATA_DIR_NAME = "p3-skills-dir"
+LINK_NAME = "jutsu"
+PLUGIN_NAME = "jutsu"
+DATA_DIR_NAME = "jutsu-skills-dir"
 CLAUDE_DRIVER = "claudeAgent"
 MIN_CLAUDE = (2, 1, 292)
 CONFLICT_PLUGIN_PREFIXES = ("pstack@",)
@@ -130,7 +130,7 @@ def link_state(link: Path) -> str:
         target = target if target.is_absolute() else (link.parent / target)
         if target.resolve() == PLUGIN.resolve():
             return "ours"
-        # A broken link counts as ours only when it points at <a p3-stack checkout>/plugin.
+        # A broken link counts as ours only when it points at <a jutsu checkout>/plugin.
         dangling_checkout = (not target.exists() and target.name == "plugin"
                              and target.parent.name == REPO.name)
         return "stale-ours" if (is_our_plugin(target) or dangling_checkout) else "foreign-link"
@@ -167,10 +167,10 @@ def claude_version() -> tuple[int, ...] | None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Install p3 into each Claude Code config dir T3 uses.")
+    ap = argparse.ArgumentParser(description="Install jutsu into each Claude Code config dir T3 uses.")
     ap.add_argument("--uninstall", action="store_true")
     ap.add_argument("--purge", action="store_true",
-                    help="with --uninstall, also remove p3's session state and its p3-models.md")
+                    help="with --uninstall, also remove jutsu's session state and its jutsu-models.md")
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--config-dir", action="append", default=[], help="add a Claude config dir (repeatable)")
@@ -205,7 +205,7 @@ def main() -> int:
             print("  skip: this config dir does not exist yet. Start Claude once with it, then rerun.")
             continue
         if args.status:
-            print(f"  p3 link: {state}")
+            print(f"  jutsu link: {state}")
             for c in conflicts(config_dir):
                 print(f"  conflict: {c}")
             continue
@@ -222,7 +222,7 @@ def main() -> int:
                     if not args.dry_run:
                         shutil.rmtree(data)
                     print(f"  removed {data}")
-                models = config_dir / "p3-models.md"
+                models = config_dir / "jutsu-models.md"
                 if models.is_file():
                     if not args.dry_run:
                         models.unlink()
@@ -238,7 +238,7 @@ def main() -> int:
                 link.symlink_to(PLUGIN.resolve(), target_is_directory=True)
             print(f"  linked {link} -> {PLUGIN.resolve()}")
         else:
-            print(f"  error: {link} exists and is not p3's link. Move it away, then rerun.")
+            print(f"  error: {link} exists and is not jutsu's link. Move it away, then rerun.")
             status = 1
             continue
         for c in conflicts(config_dir):
@@ -247,11 +247,11 @@ def main() -> int:
                 plugin_id = c.split()[1]
                 print(f"    fix: CLAUDE_CONFIG_DIR={config_dir} claude plugin disable {plugin_id}")
     if args.uninstall:
-        print("p3 is removed. Threads that are already open keep it until they restart.")
-        print("Kept: files p3 may have written inside your repos (.claude/p3-models.md, .p3/, .audit/).")
+        print("jutsu is removed. Threads that are already open drop it on their next message.")
+        print("Kept: files jutsu may have written inside your repos (.claude/jutsu-models.md, .jutsu/, .audit/).")
         print(f"You can delete this folder now: {REPO}")
     elif not args.status:
-        print("Start a new Claude thread in T3 (or run /reload-plugins) and type $p3 or /p3 <task>.")
+        print("Type $jutsu or /jutsu <task> in a T3 Claude thread. Threads that are already open pick it up on their next message.")
     return status
 
 

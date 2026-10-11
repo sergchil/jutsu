@@ -3,25 +3,25 @@
     {
       "id": "lead-1",
       "pattern": "the **how** skill",
-      "replacement": "the **how** skill (`{{p3}}/skills/how/SKILL.md`)",
+      "replacement": "the **how** skill (`{{plugin}}/skills/how/SKILL.md`)",
       "files": "^skills/poteto-mode/playbooks/investigation\\.md$"
     },
     {
       "id": "lead-2",
       "pattern": "the **why** skill",
-      "replacement": "the **why** skill (`{{p3}}/skills/why/SKILL.md`)",
+      "replacement": "the **why** skill (`{{plugin}}/skills/why/SKILL.md`)",
       "files": "^skills/poteto-mode/playbooks/investigation\\.md$"
     },
     {
       "id": "lead-3",
       "pattern": "the **unslop** skill to the reply",
-      "replacement": "the **unslop** skill (`{{p3}}/skills/unslop/SKILL.md`) to the reply",
+      "replacement": "the **unslop** skill (`{{plugin}}/skills/unslop/SKILL.md`) to the reply",
       "files": "^skills/poteto-mode/playbooks/investigation\\.md$"
     },
     {
       "id": "lead-4",
       "pattern": "the **principle-guard-the-context-window** skill)",
-      "replacement": "the **principle-guard-the-context-window** principle, `{{p3}}/principles/principle-guard-the-context-window.md`)",
+      "replacement": "the **principle-guard-the-context-window** principle, `{{plugin}}/principles/principle-guard-the-context-window.md`)",
       "files": "^skills/poteto-mode/playbooks/trace-forensics\\.md$"
     }
   ]

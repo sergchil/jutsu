@@ -42,7 +42,7 @@ def main() -> int:
     args = ap.parse_args()
     meta = json.loads(UPSTREAM.read_text())
 
-    with tempfile.TemporaryDirectory(prefix="p3sync-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="jutsu-sync-") as tmp:
         clone = Path(tmp) / "plugins"
         run("git", "clone", "--quiet", "--filter=blob:none", "--no-checkout", meta["repository"], str(clone))
         run("git", "sparse-checkout", "set", meta["path"], cwd=clone)
@@ -82,7 +82,7 @@ def main() -> int:
         meta.update(commit=commit, version=version)
         UPSTREAM.write_text(json.dumps(meta, indent=2) + "\n")
         print(f"vendor/pstack updated to {version} ({commit[:12]}).")
-        with tempfile.TemporaryDirectory(prefix="p3sync-build-") as out:
+        with tempfile.TemporaryDirectory(prefix="jutsu-sync-build-") as out:
             try:
                 build.build(Path(out), relock=False, check_lock=True)
                 print("Nothing to port: the build passes as is. Run the tests, then commit.")

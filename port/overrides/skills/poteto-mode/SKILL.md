@@ -1,16 +1,16 @@
 ---
 name: poteto-mode
-description: poteto's agent style for concise, detailed responses, deliberate subagents, unslopped prose, simple code, and verified work. Use for poteto, /p3, or requests to work in this style.
+description: poteto's agent style for concise, detailed responses, deliberate subagents, unslopped prose, simple code, and verified work. Use for poteto, /jutsu, or requests to work in this style.
 disable-model-invocation: true
 ---
 
 # Poteto mode
 
-This is pstack's poteto mode running in Claude Code, usually inside T3 Code. `/p3` turns it on for the rest of the session. While it is on, each turn carries the reminder "New task? Playbook match or rigor needed -> apply poteto mode. Casual turn or user opts out -> don't." `/p3 off` turns it off.
+This is pstack's poteto mode running in Claude Code, usually inside T3 Code. `/jutsu` turns it on for the rest of the session. While it is on, each turn carries the reminder "New task? Playbook match or rigor needed -> apply poteto mode. Casual turn or user opts out -> don't." `/jutsu off` turns it off.
 
-Read [the p3 runtime](references/runtime.md) before you spawn a subagent, pick a model, schedule a wake, watch a pull request, isolate a writer, or prove work on a UI. It maps each Cursor mechanism in these playbooks to Claude Code and T3.
+Read [the jutsu runtime](references/runtime.md) before you spawn a subagent, pick a model, schedule a wake, watch a pull request, isolate a writer, or prove work on a UI. It maps each Cursor mechanism in these playbooks to Claude Code and T3.
 
-The skills named in **bold** are files, not entries in your skill list. Read `{{p3}}/skills/<name>/SKILL.md` and follow it. Each principle leaf is `{{p3}}/principles/principle-<name>.md`. Paths here are relative to this file.
+The skills named in **bold** are files, not entries in your skill list. Read `{{plugin}}/skills/<name>/SKILL.md` and follow it. Each principle leaf is `{{plugin}}/principles/principle-<name>.md`. Paths here are relative to this file.
 
 ## Non-negotiables
 
@@ -26,9 +26,9 @@ Remaining triggers:
 - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
 - Any prose surface, your reply to the user included → the **unslop** skill. Write the reply per **Writing the reply**. Agent-facing prose (skills, briefs, prompts) also follows step 1 of the Authoring a skill playbook (`playbooks/authoring-a-skill.md`).
-- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/p3:technical-writing`).
+- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/jutsu:technical-writing`).
 - Before commit → deslop the diff per [the runtime's Missing companions](references/runtime.md#missing-companions).
-- Before review → the **no-comments** skill (`/p3:no-comments`).
+- Before review → the **no-comments** skill (`/jutsu:no-comments`).
 - Shipping UI / IDE / CLI → drive the real surface per [the runtime's Proof surfaces](references/runtime.md#proof-surfaces): T3's `preview_*` tools for browser and web UIs, `device_*` for simulators, the terminal for CLIs and TUIs. For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
 - Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → the **benchmark-checklist** skill before you report or act on the number.
 - Any PR-status request ("babysit this", "get it green", "address the bugbot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`), not Claude Code's `/autofix-pr` or T3's own PR watching, which match the same words. Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
@@ -39,7 +39,7 @@ Remaining triggers:
 
 ## Principles
 
-Read the leaf file in full for any principle you apply. Each entry names when it applies. Each leaf is the file `{{p3}}/principles/principle-<title>.md`, with the title in kebab case, hyphens kept and other punctuation dropped, unless the entry gives its name.
+Read the leaf file in full for any principle you apply. Each entry names when it applies. Each leaf is the file `{{plugin}}/principles/principle-<title>.md`, with the title in kebab case, hyphens kept and other punctuation dropped, unless the entry gives its name.
 
 **Core**
 
@@ -92,9 +92,9 @@ Read the leaf file in full for any principle you apply. Each entry names when it
 
 ## Subagents
 
-**Use `subagent_type: "p3:poteto-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). Open its brief with this file's absolute path and the line `Read it in full before any work.` `/p3` and `p3:poteto-agent` route through the same rules. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to `p3:poteto-agent`.
+**Use `subagent_type: "jutsu:poteto-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). Open its brief with this file's absolute path and the line `Read it in full before any work.` `/jutsu` and `jutsu:poteto-agent` route through the same rules. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to `jutsu:poteto-agent`.
 
-**Defaults for every `Agent` call.** Per [the runtime's Subagents section](references/runtime.md#subagents): `run_in_background: true`, file pointers not inlined context, and the role's `model` and `effort` from [the runtime's Roles](references/runtime.md#roles) (a role line in `p3-models.md` overrides it; `/p3:setup-pstack` writes that file). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to the `hardest tasks` role, whether the task needs judgment on vague intent or is a precisely specified sequence of steps to execute to the letter. Trivial mechanical edits go to the playbook's code role at a lower effort. Role lines override the model choices in the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`) too. A role line of `inherit` runs that role on this session's model (omit `model` and `effort`). Each code playbook's model comes from its role (`feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`), and the hardest changes read `hardest tasks`. Prose and judgment read `judgment and prose`. A role that names a T3 target runs through `delegate_task` instead, per the runtime.
+**Defaults for every `Agent` call.** Per [the runtime's Subagents section](references/runtime.md#subagents): `run_in_background: true`, file pointers not inlined context, and the role's `model` and `effort` from [the runtime's Roles](references/runtime.md#roles) (a role line in `jutsu-models.md` overrides it; `/jutsu:setup-pstack` writes that file). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to the `hardest tasks` role, whether the task needs judgment on vague intent or is a precisely specified sequence of steps to execute to the letter. Trivial mechanical edits go to the playbook's code role at a lower effort. Role lines override the model choices in the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`) too. A role line of `inherit` runs that role on this session's model (omit `model` and `effort`). Each code playbook's model comes from its role (`feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`), and the hardest changes read `hardest tasks`. Prose and judgment read `judgment and prose`. A role that names a T3 target runs through `delegate_task` instead, per the runtime.
 
 You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. A second opinion is the same prompt against a different model. Agreement is high-signal.
 

@@ -3,5 +3,5 @@
 .plugin.old/
 __pycache__/
 node_modules/
-.p3/
+.jutsu/
 .audit/

@@ -1,12 +1,12 @@
 ---
 name: setup-pstack
-description: Configure which models pstack uses per role and at what reasoning budget. Detects your available Claude models and effort levels and writes p3-models.md, which overrides the role defaults. Use for /p3:setup-pstack, "configure pstack models", "pstack budget", or changing pstack's model choices.
+description: Configure which models pstack uses per role and at what reasoning budget. Detects your available Claude models and effort levels and writes jutsu-models.md, which overrides the role defaults. Use for /jutsu:setup-pstack, "configure pstack models", "pstack budget", or changing pstack's model choices.
 disable-model-invocation: true
 ---
 
 # Setup pstack
 
-Write `p3-models.md`, the file that sets pstack's model and effort per role. [The runtime's Roles section](../../skills/poteto-mode/references/runtime.md#roles) reads it. It looks for `.claude/p3-models.md` in the repo first, then `p3-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). Write the config-dir file unless the user asks for this repo only. Never edit `settings.json` or `CLAUDE.md`. Every skill reads `p3-models.md` directly. Commit a repo's `.claude/p3-models.md`: T3 worktree threads see only committed files.
+Write `jutsu-models.md`, the file that sets pstack's model and effort per role. [The runtime's Roles section](../../skills/poteto-mode/references/runtime.md#roles) reads it. It looks for `.claude/jutsu-models.md` in the repo first, then `jutsu-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). Write the config-dir file unless the user asks for this repo only. Never edit `settings.json` or `CLAUDE.md`. Every skill reads `jutsu-models.md` directly. Commit a repo's `.claude/jutsu-models.md`: T3 worktree threads see only committed files.
 
 ## Steps
 
@@ -20,7 +20,7 @@ Never write a model you have not confirmed is available. The value `inherit` is 
 
 ### 2. Load current state
 
-The defaults are the role lines in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). If `p3-models.md` already exists where the runtime looks, read it and treat its `# budget` line and its role values as the current choices. Otherwise start from those defaults. A line whose role is not in step 5, such as `how critics`, is from a retired role. Drop it.
+The defaults are the role lines in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). If `jutsu-models.md` already exists where the runtime looks, read it and treat its `# budget` line and its role values as the current choices. Otherwise start from those defaults. A line whose role is not in step 5, such as `how critics`, is from a retired role. Drop it.
 
 ### 3. Budget, map, and confirm
 
@@ -41,10 +41,10 @@ Every alias written must be in the detected set. Every T3 entry must name a runn
 
 ### 5. Write the file
 
-Write `p3-models.md` with a `# budget` line with the chosen label and its target effort, and one line per role, using the same labels as [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). A value is `<alias> @<effort>`, `t3:<providerInstanceId>/<modelId> @<effort>`, or `inherit`. Overwrite the whole file so re-runs stay idempotent. Shape, with `large` applied to the defaults:
+Write `jutsu-models.md` with a `# budget` line with the chosen label and its target effort, and one line per role, using the same labels as [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). A value is `<alias> @<effort>`, `t3:<providerInstanceId>/<modelId> @<effort>`, or `inherit`. Overwrite the whole file so re-runs stay idempotent. Shape, with `large` applied to the defaults:
 
 ```
-# p3 model configuration. One line per role. Delete a line to fall back to the runtime default.
+# jutsu model configuration. One line per role. Delete a line to fall back to the runtime default.
 # `inherit` as a value: the role runs on the session's model and effort (omit Agent `model` and `effort`). Inherit entries in a panel list still count toward its fan-out.
 # `t3:<providerInstanceId>/<modelId> @<effort>` runs the role through delegate_task on that T3 provider instance.
 # budget: large (xhigh)
@@ -75,4 +75,4 @@ Tell the user where the file was written and that it applies to new sessions. Re
 
 ### 7. Offer a verification skill (optional)
 
-Check whether the project has a way to drive the real app for proof (a `verify-*` skill in `.claude/skills/`, or an existing harness). If not, offer once: "want a project-local verification skill, so agents can drive the app the way a user does and prove changes work? I can generate one with /p3:create-verification-skill." On yes, read [`create-verification-skill`](../../skills/create-verification-skill/SKILL.md) and follow it. p3 skills are user-invoked, so the Skill tool cannot start it. On no, move on without pushing.
+Check whether the project has a way to drive the real app for proof (a `verify-*` skill in `.claude/skills/`, or an existing harness). If not, offer once: "want a project-local verification skill, so agents can drive the app the way a user does and prove changes work? I can generate one with /jutsu:create-verification-skill." On yes, read [`create-verification-skill`](../../skills/create-verification-skill/SKILL.md) and follow it. jutsu skills are user-invoked, so the Skill tool cannot start it. On no, move on without pushing.

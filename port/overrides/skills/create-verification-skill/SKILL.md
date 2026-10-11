@@ -1,6 +1,6 @@
 ---
 name: create-verification-skill
-description: "Generate a project-local verification skill that drives your app the way a user does — any language, framework, or platform. Use for /p3:create-verification-skill, \"make a control skill for this repo\", or when a project has no scripted way to prove UI/CLI/service behavior."
+description: "Generate a project-local verification skill that drives your app the way a user does — any language, framework, or platform. Use for /jutsu:create-verification-skill, \"make a control skill for this repo\", or when a project has no scripted way to prove UI/CLI/service behavior."
 disable-model-invocation: true
 ---
 
@@ -14,7 +14,7 @@ Answer these from the codebase and only ask the user what you cannot observe:
 
 - **Surface:** what does a user actually touch? A web UI, a CLI/TUI, a desktop app, an API, a mobile app, a library? A repo can have several; pick the primary one and note the rest.
 - **Run:** how does the app start locally? Prefer the repo's own documented dev command (package scripts, Makefile, README quickstart). Note ports, env vars, seed data, auth.
-- **Drive:** how can an agent interact with it programmatically? Existing harnesses first — Playwright/Cypress specs, expect scripts, PTY helpers, curl-able endpoints, a debug port. Only then pick a generic recipe: T3's `preview_*` tools for a web UI (browser/CDP outside T3, and for Electron), T3's `device_*` tools for a mobile app on a simulator, a tmux/PTY harness for CLI/TUI, plain HTTP for services ([the runtime's Proof surfaces]({{p3}}/skills/poteto-mode/references/runtime.md#proof-surfaces)).
+- **Drive:** how can an agent interact with it programmatically? Existing harnesses first — Playwright/Cypress specs, expect scripts, PTY helpers, curl-able endpoints, a debug port. Only then pick a generic recipe: T3's `preview_*` tools for a web UI (browser/CDP outside T3, and for Electron), T3's `device_*` tools for a mobile app on a simulator, a tmux/PTY harness for CLI/TUI, plain HTTP for services ([the runtime's Proof surfaces]({{plugin}}/skills/poteto-mode/references/runtime.md#proof-surfaces)).
 - **Observe:** what evidence can be captured? Screenshots, terminal transcripts, response bodies, logs, exit codes, DB state.
 - **Isolate:** can two instances run side by side (ports, data dirs, profiles)? If not, say so in the generated skill: refusing to double-drive a shared instance beats corrupting the user's session.
 
@@ -41,4 +41,4 @@ Run its own instructions end to end once: launch, doctor, drive ONE mapped featu
 
 ## 5. Offer the maintenance loop
 
-Point the user at `/p3:maintain-verification-skill` (`{{p3}}/skills/maintain-verification-skill/SKILL.md`) for keeping the map honest as the app changes. Suggest a cadence only if they ask.
+Point the user at `/jutsu:maintain-verification-skill` (`{{plugin}}/skills/maintain-verification-skill/SKILL.md`) for keeping the map honest as the app changes. Suggest a cadence only if they ask.

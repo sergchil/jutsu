@@ -24,11 +24,11 @@ Before spawning reviewers, state the intent in one clear paragraph from the user
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message with the `Agent` tool, one per entry on the `interrogate reviewers` line in `p3-models.md`, labeled Reviewer A, B, and so on to match the entry count. If the file or that line is missing, use the line's defaults in [the runtime's Roles]({{p3}}/skills/poteto-mode/references/runtime.md#roles), Reviewer A on the first.
+Launch all reviewers in a single message with the `Agent` tool, one per entry on the `interrogate reviewers` line in `jutsu-models.md`, labeled Reviewer A, B, and so on to match the entry count. If the file or that line is missing, use the line's defaults in [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles), Reviewer A on the first.
 
 Each reviewer gets `subagent_type: general-purpose`, a read-only brief, which the reviewer prompt carries, and `model` and `effort` set from its configured entry, or its default when there is no configured line. Omit `model` for an `inherit` entry, so that reviewer runs on the parent model. `effort` is never below `high`. Pass `high` for an entry that names a lower effort or none, `inherit` included.
 
-If the `Agent` tool rejects a configured entry, run that reviewer on a default and say so. Do not block the review on it. An entry that names a T3 target runs that reviewer through `delegate_task` per [the runtime's Subagents]({{p3}}/skills/poteto-mode/references/runtime.md#subagents). Pass `options` with `effort` on every call and a distinct `clientRequestId` per reviewer and per round, and read each result with `task_status` after the wake.
+If the `Agent` tool rejects a configured entry, run that reviewer on a default and say so. Do not block the review on it. An entry that names a T3 target runs that reviewer through `delegate_task` per [the runtime's Subagents]({{plugin}}/skills/poteto-mode/references/runtime.md#subagents). Pass `options` with `effort` on every call and a distinct `clientRequestId` per reviewer and per round, and read each result with `task_status` after the wake.
 
 Record the provider, model, and effort each reviewer actually ran at, not the ones you asked for. A `delegate_task` reviewer's `task_status` names its provider and model, and `t3_thread_configuration` on its `childThreadId` names its effort. An `Agent` reviewer runs at the `model` and `effort` you passed, unless its model does not offer that effort and falls back to its default.
 
@@ -70,4 +70,4 @@ You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator
 [Each with a brief rationale.]
 
 ### Agreement Map
-[Where models agreed and diverged, and what that pattern tells us. When every reviewer is a Claude model, say that the agreement is same-vendor, per the Model diversity note in [the runtime's Roles]({{p3}}/skills/poteto-mode/references/runtime.md#roles).]
+[Where models agreed and diverged, and what that pattern tells us. When every reviewer is a Claude model, say that the agreement is same-vendor, per the Model diversity note in [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles).]

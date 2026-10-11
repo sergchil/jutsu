@@ -1,6 +1,6 @@
 # Notices
 
-p3-stack is a port. The skills, principles, and language are Lauren Tan's (poteto). The Claude Code and T3 Code wiring is this repo's.
+jutsu is a port. The skills, principles, and language are Lauren Tan's (poteto). The Claude Code and T3 Code wiring is this repo's.
 
 - **pstack** by Lauren Tan, MIT. Upstream: https://github.com/cursor/plugins/tree/main/pstack. Vendored unchanged in `vendor/pstack/` with its own `LICENSE`.
 - Ideas and fixes adapted from other ports, all MIT:

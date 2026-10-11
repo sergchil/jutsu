@@ -18,7 +18,7 @@ Scan for:
 
 ## Scope to skills and tools the session actually used
 
-Route findings only to skills, tools, or MCPs this transcript used. A skill counts as used when the transcript shows a `Skill` tool call or a user turn that invokes it as `/<name>`, a `Read` of its `SKILL.md` (under project `.claude/skills/`, `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/`, or `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/`) or of any file in the p3 plugin directory, whose skills, playbooks, and principles load by path, an `Agent` prompt naming its path, or a tool call (Bash, Grep, MCP, etc.) matching its documented commands. Speculative routings to skills the parent never opened do not count.
+Route findings only to skills, tools, or MCPs this transcript used. A skill counts as used when the transcript shows a `Skill` tool call or a user turn that invokes it as `/<name>`, a `Read` of its `SKILL.md` (under project `.claude/skills/`, `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/`, or `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/`) or of any file in the jutsu plugin directory, whose skills, playbooks, and principles load by path, an `Agent` prompt naming its path, or a tool call (Bash, Grep, MCP, etc.) matching its documented commands. Speculative routings to skills the parent never opened do not count.
 
 Two finding shapes are valid:
 - The parent invoked the skill and you found a real gap in its body. Route to the skill's relevant section.

@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 A guided flow for turning the user's working conventions into a skill agents will follow. The output is one `-mode` skill tailored to them (e.g. `jay-mode`, `priya-mode`).
 
-This skill orchestrates three others: an inline mining pass (see step 1), the Authoring a skill playbook (`{{p3}}/skills/poteto-mode/playbooks/authoring-a-skill.md`, authoring), and the **unslop** skill (`{{p3}}/skills/unslop/SKILL.md`, prose discipline). It sequences them. It doesn't replace them.
+This skill orchestrates three others: an inline mining pass (see step 1), the Authoring a skill playbook (`{{plugin}}/skills/poteto-mode/playbooks/authoring-a-skill.md`, authoring), and the **unslop** skill (`{{plugin}}/skills/unslop/SKILL.md`, prose discipline). It sequences them. It doesn't replace them.
 
 ## Flow
 
@@ -26,7 +26,7 @@ Update mode changes the rest of the flow:
 
 ### 1. Mine their history
 
-Locate the active workspace's transcripts before fanning out. They live in `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<dir>/`, where `<dir>` is the workspace path encoded as the runtime describes ([the runtime's History]({{p3}}/skills/poteto-mode/references/runtime.md#history)). Use only that path. Don't glob across `projects/*/`. That crosses workspace boundaries and reads private chats from unrelated projects. In T3, `t3_thread_list` and `t3_thread_read` read the same project's threads. Skip records with `isMeta` set and local-command records.
+Locate the active workspace's transcripts before fanning out. They live in `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<dir>/`, where `<dir>` is the workspace path encoded as the runtime describes ([the runtime's History]({{plugin}}/skills/poteto-mode/references/runtime.md#history)). Use only that path. Don't glob across `projects/*/`. That crosses workspace boundaries and reads private chats from unrelated projects. In T3, `t3_thread_list` and `t3_thread_read` read the same project's threads. Skip records with `isMeta` set and local-command records.
 
 Survey recent agent conversations within that scope for recurring patterns. Run multiple parallel subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Each slice mining subagent reads transcripts from the workspace-scoped path the parent provides, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
 
@@ -60,7 +60,7 @@ Group the combined signals into sections. Common ones (use only what applies):
 - **Process**: git worktrees, commits, PRs, review/merge tooling.
 - **Skills**: skill-authoring habits, fix-the-skill-first, proposing new skills.
 
-The **poteto-mode** skill (`{{p3}}/skills/poteto-mode/SKILL.md`) shows the shape. Read it for granularity. Don't copy its content. The user's rules are not the same as poteto-mode's.
+The **poteto-mode** skill (`{{plugin}}/skills/poteto-mode/SKILL.md`) shows the shape. Read it for granularity. Don't copy its content. The user's rules are not the same as poteto-mode's.
 
 ### 4. Draft the skill
 

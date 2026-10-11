@@ -1,6 +1,6 @@
 # Updating from upstream pstack
 
-p3-stack keeps poteto's pstack byte for byte in `vendor/pstack/`. Everything Claude Code and T3 need lives beside it in `port/`. An update is a sync plus a short, explicit list of things to port.
+jutsu keeps poteto's pstack byte for byte in `vendor/pstack/`. Everything Claude Code and T3 need lives beside it in `port/`. An update is a sync plus a short, explicit list of things to port.
 
 ## Automatic
 
