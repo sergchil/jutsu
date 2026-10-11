@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Setup pstack
 
-Write `p3-models.md`, the file that sets pstack's model and effort per role. [The runtime's Roles section](../../skills/poteto-mode/references/runtime.md#roles) reads it. It looks for `.claude/p3-models.md` in the repo first, then `p3-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). Write the config-dir file unless the user asks for this repo only. Never edit `settings.json` or `CLAUDE.md`. Every skill reads `p3-models.md` directly.
+Write `p3-models.md`, the file that sets pstack's model and effort per role. [The runtime's Roles section](../../skills/poteto-mode/references/runtime.md#roles) reads it. It looks for `.claude/p3-models.md` in the repo first, then `p3-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). Write the config-dir file unless the user asks for this repo only. Never edit `settings.json` or `CLAUDE.md`. Every skill reads `p3-models.md` directly. Commit a repo's `.claude/p3-models.md`: T3 worktree threads see only committed files.
 
 ## Steps
 
@@ -24,7 +24,7 @@ The defaults are the role lines in [the runtime's Roles](../../skills/poteto-mod
 
 ### 3. Budget, map, and confirm
 
-**(a) Ask for a budget.** Ask with `AskUserQuestion`. Offer these four options with these exact labels, and give each a non-empty description of what it costs, because a blank description can stall a T3 thread ([the runtime's Questions](../../skills/poteto-mode/references/runtime.md#questions)). Name the current budget when the file records one. With no file, say that the defaults sit between `medium` and `large`. Code, explorer, and investigator roles run at `high`, and judgment roles at `xhigh`.
+**(a) Ask for a budget.** Ask with `AskUserQuestion`. Offer these four options with these exact labels, and give each a non-empty description of what it costs, because a blank description can stall a T3 thread ([the runtime's Questions](../../skills/poteto-mode/references/runtime.md#questions)). Name the current budget when the file records one. With no file, say that the defaults match `large`: every role runs at `xhigh`, as upstream runs.
 
 - `unlimited — max reasoning`
 - `large — xhigh reasoning`

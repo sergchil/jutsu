@@ -166,7 +166,8 @@ def resolve_p3_token(out_rel: str, text: str) -> str:
     return P3_TOKEN.sub(rel, text)
 
 
-def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[str]:
+def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
+    """relock: False, True (every override), or a set of plugin paths to relock."""
     spec = load_json(SPEC)
     compiled = compile_subs(load_substitutions())
     lock = load_json(LOCK) if LOCK.exists() else {}
@@ -188,8 +189,10 @@ def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[
         if override.exists():
             want = lock.get(out_rel)
             have = sha256(src)
-            if relock:
+            if relock is True or (relock and out_rel in relock):
                 lock[out_rel] = have
+            elif relock and want != have:
+                problems.append(f"re-merge port/overrides/{out_rel}: upstream {rel} changed (not in --relock list)")
             elif check_lock and want != have:
                 problems.append(
                     f"re-merge port/overrides/{out_rel}: upstream {rel} changed "
@@ -232,7 +235,7 @@ def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[
         produced[out_rel] = "added"
 
     commands = bare_command_pattern([d.name for d in (out_dir / "skills").iterdir() if d.is_dir()])
-    for out_rel, kind in produced.items():
+    for out_rel, kind in list(produced.items()):
         if kind == "binary" or not out_rel.endswith(".md"):
             continue
         path = out_dir / out_rel
@@ -246,6 +249,10 @@ def build(out_dir: Path, relock: bool = False, check_lock: bool = True) -> list[
             problems.append(f"substitution {s['id']} matched nothing; upstream text moved, so update or delete the rule")
     if problems:
         raise BuildError(f"{len(problems)} thing(s) to port after the upstream change:\n  - " + "\n  - ".join(problems))
+    import check as checker  # same folder; static checks the plugin must pass
+    found = checker.check(out_dir)
+    if found:
+        raise BuildError(f"{len(found)} check problem(s) in the built plugin:\n  - " + "\n  - ".join(found[:40]))
     notes.append(f"{len(produced)} files: " + ", ".join(
         f"{k}={sum(1 for v in produced.values() if v == k)}" for k in ("upstream", "override", "added", "binary")))
     return notes
@@ -278,7 +285,8 @@ def trees_equal(a: Path, b: Path) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
-    ap.add_argument("--relock", action="store_true")
+    ap.add_argument("--relock", nargs="*", metavar="PLUGIN_PATH",
+                    help="record current upstream hashes: for every override, or only for the given plugin paths")
     ap.add_argument("--out", help="write the build here instead of plugin/ (for previews)")
     ap.add_argument("--no-lock", action="store_true", help="skip the override lock check (previews only)")
     args = ap.parse_args()
@@ -301,7 +309,7 @@ def main() -> int:
         tmp_out = Path(tmp) / "plugin"
         tmp_out.mkdir()
         try:
-            notes = build(tmp_out, relock=args.relock)
+            notes = build(tmp_out, relock=(True if args.relock == [] else set(args.relock) if args.relock else False))
         except BuildError as exc:
             print(f"build failed: {exc}", file=sys.stderr)
             return 1

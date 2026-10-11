@@ -41,10 +41,10 @@ Playbooks keep upstream's words. Read them this way.
 - `effort`: `low`, `medium`, `high`, `xhigh`, or `max`. Pass it on every call that has a role. Without it the child inherits the session effort.
 - `run_in_background`: true unless you need the result before your next step.
 - `name`: set it for any child you may message or stop. `SendMessage` continues a live child.
-- **Brief.** A child gets only its brief. Open every `p3:poteto-agent` brief with the absolute path of the router (`skills/poteto-mode/SKILL.md`, which you know because you read it) and the line `Read it in full before any work.` Then the goal, file pointers instead of pasted context, constraints, and the report format. Never put `$(...)` or backticks that a shell would expand into a brief that a child will paste into a command.
+- **Brief.** A child gets only its brief. Open every `p3:poteto-agent` brief with the absolute path of the router (`skills/poteto-mode/SKILL.md`, which you know because you read it) and the line `Read it in full before any work.` Then the goal, file pointers instead of pasted context, constraints, and the report format. Never put `$(...)` or backticks that a shell would expand into a brief that a child will paste into a command. Tell every child to run each command in the foreground and never end its turn with a background shell or agent still running, since a Claude child that does can report early. A deadline orders the work; it never waives a step.
 - **Stop what you abandon.** In the agent list `completed` means the completion was notified, not that the process exited. A child with live background work reports completed and keeps writing. Stop it with `TaskStop` (it may be deferred, so load it with `ToolSearch` first) and confirm with `git status` before you give its work to a fresh child.
 - **Drain before landing.** Before a commit, merge, push, or deploy from a worktree, every child that writes there has stopped.
-- **No subagent** has `AskUserQuestion` or `ScheduleWakeup`, so questions and `/loop` stay in this thread. Background children also cannot call `delegate_task` after your turn ends.
+- **No subagent** has `AskUserQuestion` or `ScheduleWakeup`, so questions and `/loop` stay in this thread. Background children also cannot call `delegate_task` after your turn ends. In T3 (the Agent SDK), a subagent does not wait for its own background children, so their reports arrive in this thread. Drain them here.
 
 **When to use `delegate_task` instead (T3 only).**
 
@@ -60,6 +60,7 @@ Rules for `delegate_task`:
 - A child's runtime and interaction modes must be equal to or narrower than yours. A broader request fails. It is never clamped.
 - `task_cancel` stops a child and its children. `t3_thread_interrupt` does not.
 - Children share your checkout. See [Isolation](#isolation).
+- Open a `delegate_task` brief for a code or judgment role with the router's absolute path and `Read it in full before any work.`, as for `p3:poteto-agent`. The child is a new session where poteto mode is off.
 - Children never call `watch_pull_request`. T3 refuses a delegated child's watch, and a native subagent's watch lands on your thread.
 
 ## Roles
@@ -95,9 +96,10 @@ A value is `<alias> @<effort>`, `inherit` (omit `model` and `effort`), or `t3:<p
 Two writers never share a checkout (principle-separate-before-serializing-shared-state).
 
 - Read-only children share your checkout.
+- Worktrees you create are invisible to T3's diff and checkpoint views, which show only the thread's own checkout. Report each one's branch and head SHA. In T3's approval-required mode, writes to a worktree outside the project ask for approval each time, so run fan-out playbooks in `auto` or `full-access`.
 - **A child that writes while another writer may overlap** gets its own worktree, created by you before you spawn it, from your current HEAD: `git worktree add <path> -b <branch> HEAD`. Commit first, because uncommitted changes do not reach it. The brief says: work only under the absolute path, prefix every command with `cd <path> &&`, report the branch and head SHA. Check that the diff landed there before you integrate. Remove the worktree after.
 - Do not use `Agent` `isolation: "worktree"` for stacked or branch-based work. It branches from the remote default branch unless the user set `worktree.baseRef: "head"`.
-- **A long-lived owner** (a PR owner in Autopilot or Orchestrate) in T3 is a launched thread: `t3_thread_launch` with `workspaceStrategy: {"type":"worktree","baseRef":"<commit SHA>","branch":"<branch>","startFromOrigin":false}`. Commit first, then set `baseRef` to `git rev-parse HEAD`. Never pass a branch name that T3 created: it names a new worktree's branch `t3/<hash>` and renames it in the background, so that name can vanish before the launch runs and the thread fails with "Workspace preparation failed" and the brief in `message`. Open the brief with the router's absolute path and the line `Read it in full before any work.`, since a launched thread is a new session where poteto mode is off. Pass `modelSelection: {instanceId, model, options:[{"id":"effort","value":"<level>"}]}`. Leave out `runtimeMode` and `interactionMode`, so the thread runs in your modes. Keep the returned `threadId`. Within a minute, read each launched thread (`t3_thread_list` or `t3_thread_read`) and confirm it is running, not failed. On "Workspace preparation failed", fix the cause and launch again. Launch has no retry key, so after a lost response check `t3_thread_list` before you launch again. Invoking one of those playbooks is the user's request for separate threads.
+- **A long-lived owner** (a PR owner in Autopilot or Orchestrate) in T3 is a launched thread: `t3_thread_launch` with a `title` and `workspaceStrategy: {"type":"worktree","baseRef":"<commit SHA>","branch":"<branch>","startFromOrigin":false}`. Commit first, then set `baseRef` to `git rev-parse HEAD`. Never pass a branch name that T3 created: it names a new worktree's branch `t3/<hash>` and renames it in the background, so that name can vanish before the launch runs and the thread fails with "Workspace preparation failed" and the brief in `message`. Open the brief with the router's absolute path and the line `Read it in full before any work.`, since a launched thread is a new session where poteto mode is off. Pass `modelSelection: {instanceId, model, options:[{"id":"effort","value":"<level>"}]}`. Leave out `runtimeMode` and `interactionMode`, so the thread runs in your modes. Keep the returned `threadId`. Within a minute, read each launched thread (`t3_thread_list` or `t3_thread_read`) and confirm it is running, not failed. On "Workspace preparation failed", fix the cause and launch again. Launch has no retry key, so after a lost response check `t3_thread_list` before you launch again. Invoking one of those playbooks is the user's request for separate threads.
   - A launched thread never wakes its launcher. Its brief says to report each milestone with `t3_thread_send` and `mode: "queue"` to the coordinator's thread id (the default `auto` steers an active turn, which interrupts Claude's running tools), and to stop when that call is refused. The coordinator also watches the owner's PR and keeps a heartbeat ([Waking](#waking)).
   - Outside T3 a long-lived owner is a background `Agent` in its own worktree.
 
@@ -113,6 +115,7 @@ Two writers never share a checkout (principle-separate-before-serializing-shared
 
 - `schedule_task` takes `schedule` as an object, never as JSON text. The minimum interval is 60 seconds. A run bound to a busy thread queues behind the active turn. Report the returned cadence and next run time. Delete the task (`delete_scheduled_task`) when its predicate holds.
 - An unbound scheduled run starts a fresh thread from `main` at origin. Bind runs to the coordinator unless the user asked for fresh threads.
+- A `fixed_time` slot missed while T3 was closed is skipped, not caught up. Check for missed work on the next run.
 - These survive a T3 restart. `/loop` and background Bash do not.
 
 ## Pull requests
@@ -129,6 +132,8 @@ Two writers never share a checkout (principle-separate-before-serializing-shared
 - T3's `auto` and `full-access` runtime modes approve tool calls without asking. Permission prompts do not guard the Always-pause list in poteto-mode's Autonomy section. You do. Ask before each item on it.
 - In plan mode, call `ExitPlanMode` with the plan. T3 shows it as a plan card, denies the call, and you stop. The user approves and sends the next message.
 - When `AskUserQuestion` is not in your tools, ask in plain text and end the turn.
+- T3 refuses a model, effort, or mode change while background agents or shells run. Ask for any mode switch before the first background child starts.
+- In plan mode T3 does not pre-approve `task_status` or `t3_thread_read`, so each read asks for approval.
 
 ## Todo list
 

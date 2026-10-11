@@ -112,6 +112,26 @@ class UpstreamUpdateTest(unittest.TestCase):
             self.assertNotIn("babysit.md", r.stderr)
 
 
+    def test_partial_relock_still_names_the_other_drifted_overrides(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            for part in ("vendor", "port", "tools"):
+                shutil.copytree(ROOT / part, repo / part)
+            vendor = repo / "vendor" / "pstack" / "skills/poteto-mode/playbooks"
+            for name in ("babysit.md", "shipping.md"):
+                (vendor / name).write_text((vendor / name).read_text() + "\nA new upstream rule.\n")
+            r = subprocess.run([sys.executable, str(repo / "tools/build.py"), "--relock",
+                                "skills/poteto-mode/playbooks/babysit.md"], capture_output=True, text=True, timeout=120)
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertIn("shipping.md", r.stderr)
+            self.assertNotIn("babysit.md", r.stderr)
+            lock = json.loads((repo / "port/overrides.lock.json").read_text())
+            old = json.loads((ROOT / "port/overrides.lock.json").read_text())
+            self.assertNotEqual(lock["skills/poteto-mode/playbooks/babysit.md"], old["skills/poteto-mode/playbooks/babysit.md"])
+            self.assertEqual(lock["skills/poteto-mode/playbooks/shipping.md"], old["skills/poteto-mode/playbooks/shipping.md"])
+
+
 class PortRulesTest(unittest.TestCase):
     def test_bare_skill_commands_become_plugin_commands(self):
         pattern = build.bare_command_pattern(["how", "bro", "figure-it-out"])

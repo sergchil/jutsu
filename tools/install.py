@@ -55,11 +55,12 @@ def shell_config_dir(env: dict) -> Path | None:
     return Path(expand_home(value)).resolve() if value else None
 
 
-def t3_settings_path(explicit: str | None) -> Path:
+def t3_settings_paths(explicit: str | None) -> list[Path]:
+    """T3's settings files: release builds use userdata/, dev builds dev/."""
     if explicit:
-        return Path(explicit).expanduser()
-    home = os.environ.get("T3CODE_HOME") or os.environ.get("T3_HOME") or str(Path.home() / ".t3")
-    return Path(home).expanduser() / "userdata" / "settings.json"
+        return [Path(explicit).expanduser()]
+    home = Path(os.environ.get("T3CODE_HOME") or os.environ.get("T3_HOME") or str(Path.home() / ".t3")).expanduser()
+    return [home / "userdata" / "settings.json", home / "dev" / "settings.json"]
 
 
 def instance_enabled(instance: dict, config: dict) -> bool:
@@ -67,7 +68,7 @@ def instance_enabled(instance: dict, config: dict) -> bool:
     return instance.get("enabled") is not False and config.get("enabled") is not False
 
 
-def claude_config_dirs(settings_path: Path, env: dict) -> tuple[list[tuple[Path, str]], list[str]]:
+def claude_config_dirs(settings_paths, env: dict) -> tuple[list[tuple[Path, str]], list[str]]:
     """(config dir, why) for every Claude config dir T3 or plain `claude` uses, and the skipped instances.
 
     The T3 desktop app does not pass a shell-exported CLAUDE_CONFIG_DIR to providers
@@ -75,18 +76,20 @@ def claude_config_dirs(settings_path: Path, env: dict) -> tuple[list[tuple[Path,
     and no instance-level CLAUDE_CONFIG_DIR uses ~/.claude there. `claude` in a shell, and
     T3 started from that shell, use the shell's value instead. Both get the link.
     """
-    found: dict[Path, str] = {home_config_dir(): "default Claude instance in the T3 app"}
+    found: dict[Path, str] = {home_config_dir(): "~/.claude: plain claude, and T3's default Claude instance"}
     shell = shell_config_dir(env)
     if shell is not None:
         found.setdefault(shell, "CLAUDE_CONFIG_DIR of this shell (plain claude, or T3 started from this shell)")
     skipped: list[str] = []
-    try:
-        settings = json.loads(settings_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return list(found.items()), skipped
-    instances = settings.get("providerInstances") or {}
-    if not isinstance(instances, dict):
-        return list(found.items()), skipped
+    instances: dict = {}
+    for settings_path in ([settings_paths] if isinstance(settings_paths, Path) else settings_paths):
+        try:
+            settings = json.loads(Path(settings_path).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        found_instances = settings.get("providerInstances") or {}
+        if isinstance(found_instances, dict):
+            instances.update(found_instances)
     for instance_id, instance in instances.items():
         if not isinstance(instance, dict) or instance.get("driver") != CLAUDE_DRIVER:
             continue
@@ -105,7 +108,7 @@ def claude_config_dirs(settings_path: Path, env: dict) -> tuple[list[tuple[Path,
         if home_path:
             path = Path(expand_home(home_path)).resolve()
         elif instance_env.get("CLAUDE_CONFIG_DIR", "").strip():
-            path = Path(instance_env["CLAUDE_CONFIG_DIR"].strip()).resolve()
+            path = Path(expand_home(instance_env["CLAUDE_CONFIG_DIR"].strip())).resolve()
         else:
             path = home_config_dir()
         found.setdefault(path, f"T3 instance {instance_id}")
@@ -176,7 +179,7 @@ def main() -> int:
         print(f"error: {PLUGIN} is missing. Run python3 tools/build.py first.", file=sys.stderr)
         return 1
 
-    targets, skipped = claude_config_dirs(t3_settings_path(args.t3_settings), dict(os.environ))
+    targets, skipped = claude_config_dirs(t3_settings_paths(args.t3_settings), dict(os.environ))
     for instance_id in skipped:
         print(f"skip: T3 instance {instance_id} is disabled. Rerun after you enable it.")
     for extra in args.config_dir:

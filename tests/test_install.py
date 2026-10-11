@@ -61,6 +61,16 @@ class InstallTest(unittest.TestCase):
         self.assertIn("skip: T3 instance claude-off is disabled", r.stdout)
         self.assertIn("skip: T3 instance claude-off2 is disabled", r.stdout)
 
+    def test_expands_tilde_in_an_instance_config_dir(self):
+        s = json.loads(self.settings.read_text())
+        s["providerInstances"]["claude-tilde"] = {"driver": "claudeAgent", "environment": [
+            {"name": "CLAUDE_CONFIG_DIR", "value": "~/claude-tilde"}], "config": {"homePath": ""}}
+        self.settings.write_text(json.dumps(s))
+        (self.home / "claude-tilde").mkdir()
+        r = self.run_install()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertTrue(self.link(self.home / "claude-tilde").is_symlink())
+
     def test_links_both_home_and_a_shell_config_dir(self):
         shell_dir = self.home / "shell-claude"
         shell_dir.mkdir()

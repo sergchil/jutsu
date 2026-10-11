@@ -82,7 +82,7 @@ The guide that comes with pstack still applies: [prompting](plugin/skills/poteto
 ## How it is built
 
 ```text
-vendor/pstack/      upstream pstack, byte for byte (now 0.15.15)
+vendor/pstack/      upstream pstack, byte for byte (version in port/upstream.json)
 port/spec.json      path moves and frontmatter rules
 port/subs/*.json    small mechanical rewrites
 port/overrides/     files rewritten for Claude + T3, pinned by upstream hash

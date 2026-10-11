@@ -49,6 +49,7 @@ DENY = [
     (r"command -v origin|\borigin pr |\bOrigin CLI\b", ()),
     (r"`Task`|\bTask tool\b|\bTask call", (RUNTIME,)),
     (r"readonly strips MCP", ()),
+    (r"readonly: true", (RUNTIME,)),
     (r"\{\{p3\}\}", ()),
 ]
 
