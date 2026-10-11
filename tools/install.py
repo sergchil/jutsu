@@ -7,7 +7,8 @@ else in the config dir is written: no settings.json edits, no marketplace record
 
     ./install.sh                 link p3 into each config dir
     ./install.sh --status        show what is linked and what conflicts
-    ./install.sh --uninstall     remove p3's links (add --purge to drop its session state)
+    ./uninstall.sh               remove everything p3 added (same as --uninstall --purge)
+    ./install.sh --uninstall     remove only p3's links
     ./install.sh --dry-run ...   print the actions only
 
 Config dirs come from T3's provider settings, resolved the way T3 resolves them
@@ -168,14 +169,15 @@ def claude_version() -> tuple[int, ...] | None:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Install p3 into each Claude Code config dir T3 uses.")
     ap.add_argument("--uninstall", action="store_true")
-    ap.add_argument("--purge", action="store_true", help="with --uninstall, also remove p3's session state")
+    ap.add_argument("--purge", action="store_true",
+                    help="with --uninstall, also remove p3's session state and its p3-models.md")
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--config-dir", action="append", default=[], help="add a Claude config dir (repeatable)")
     ap.add_argument("--t3-settings", help="path to T3's settings.json (default ~/.t3/userdata/settings.json)")
     args = ap.parse_args()
 
-    if not (PLUGIN / ".claude-plugin" / "plugin.json").exists():
+    if not args.uninstall and not args.status and not (PLUGIN / ".claude-plugin" / "plugin.json").exists():
         print(f"error: {PLUGIN} is missing. Run python3 tools/build.py first.", file=sys.stderr)
         return 1
 
@@ -214,11 +216,17 @@ def main() -> int:
                 print(f"  removed {link}")
             else:
                 print(f"  nothing to remove ({state})")
-            data = config_dir / "plugins" / "data" / DATA_DIR_NAME
-            if args.purge and data.is_dir():
-                if not args.dry_run:
-                    shutil.rmtree(data)
-                print(f"  removed {data}")
+            if args.purge:
+                data = config_dir / "plugins" / "data" / DATA_DIR_NAME
+                if data.is_dir():
+                    if not args.dry_run:
+                        shutil.rmtree(data)
+                    print(f"  removed {data}")
+                models = config_dir / "p3-models.md"
+                if models.is_file():
+                    if not args.dry_run:
+                        models.unlink()
+                    print(f"  removed {models}")
             continue
         if state == "ours":
             print("  already linked")
@@ -238,7 +246,11 @@ def main() -> int:
             if c.startswith("plugin "):
                 plugin_id = c.split()[1]
                 print(f"    fix: CLAUDE_CONFIG_DIR={config_dir} claude plugin disable {plugin_id}")
-    if not args.status and not args.uninstall:
+    if args.uninstall:
+        print("p3 is removed. Threads that are already open keep it until they restart.")
+        print("Kept: files p3 may have written inside your repos (.claude/p3-models.md, .p3/, .audit/).")
+        print(f"You can delete this folder now: {REPO}")
+    elif not args.status:
         print("Start a new Claude thread in T3 (or run /reload-plugins) and type $p3 or /p3 <task>.")
     return status
 

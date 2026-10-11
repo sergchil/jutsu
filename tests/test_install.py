@@ -139,6 +139,38 @@ class InstallTest(unittest.TestCase):
         self.assertNotIn("pstack@off", r.stdout)
         self.assertIn("p3-mode is installed (another pstack port)", r.stdout)
 
+    def test_uninstall_script_removes_everything_p3_added(self):
+        self.run_install()
+        (self.default / "p3-models.md").write_text("feature, refactoring: opus @xhigh\n")
+        data = self.default / "plugins" / "data" / "p3-skills-dir" / "sessions"
+        data.mkdir(parents=True)
+        (data / "abc").write_text("on\n")
+        (self.default / "skills" / "keep-me").mkdir()
+        (self.default / "settings.json").write_text("{}")
+        r = subprocess.run(["sh", str(ROOT / "uninstall.sh"), "--t3-settings", str(self.settings)],
+                           capture_output=True, text=True, env=self.env, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        for d in (self.default, self.work, self.envdir):
+            self.assertFalse(self.link(d).is_symlink(), d)
+        self.assertFalse((self.default / "p3-models.md").exists())
+        self.assertFalse((self.default / "plugins" / "data" / "p3-skills-dir").exists())
+        self.assertTrue((self.default / "skills" / "keep-me").is_dir())
+        self.assertEqual((self.default / "settings.json").read_text(), "{}")
+        self.assertIn("p3 is removed", r.stdout)
+        again = subprocess.run(["sh", str(ROOT / "uninstall.sh"), "--t3-settings", str(self.settings)],
+                               capture_output=True, text=True, env=self.env, timeout=30)
+        self.assertEqual(again.returncode, 0)
+        self.assertIn("nothing to remove", again.stdout)
+
+    def test_uninstall_dry_run_changes_nothing(self):
+        self.run_install()
+        (self.default / "p3-models.md").write_text("x\n")
+        r = subprocess.run(["sh", str(ROOT / "uninstall.sh"), "--dry-run", "--t3-settings", str(self.settings)],
+                           capture_output=True, text=True, env=self.env, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertTrue(self.link(self.default).is_symlink())
+        self.assertTrue((self.default / "p3-models.md").exists())
+
     def test_uninstall_removes_only_p3_links(self):
         self.run_install()
         (self.default / "skills" / "keep-me").mkdir()

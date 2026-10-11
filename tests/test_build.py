@@ -152,6 +152,23 @@ class PortRulesTest(unittest.TestCase):
         self.assertNotIn('"baseRef":"<parent branch>"', runtime)
 
 
+class DocsTest(unittest.TestCase):
+    def test_repo_docs_links_resolve(self):
+        import re
+        link = re.compile(r"\]\(([^)\s#]+)(#[^)]*)?\)")
+        for doc in [ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md"))]:
+            text = doc.read_text()
+            for m in link.finditer(text):
+                target = m.group(1)
+                if re.match(r"[a-z]+:", target):
+                    continue
+                self.assertTrue((doc.parent / target).exists(), f"{doc.name}: {target}")
+
+    def test_readme_stays_short(self):
+        lines = (ROOT / "README.md").read_text().splitlines()
+        self.assertLessEqual(len(lines), 90, "keep the README scannable; move detail to docs/")
+
+
 class RoleTableTest(unittest.TestCase):
     """setup-pstack's example table must equal the runtime's Roles defaults."""
 

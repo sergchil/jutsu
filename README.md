@@ -1,109 +1,60 @@
 # p3-stack
 
-[pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan (poteto), ported to **Claude Code running inside [T3 Code](https://github.com/pingdotgg/t3code)**.
+[pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan (poteto), ported to **Claude Code inside [T3 Code](https://github.com/pingdotgg/t3code)**.
 
-pstack turns an agent into an engineering team. One mode reads each request and routes it to a playbook (bug fix, feature, refactor, babysit a PR, overnight run, and 18 more). Principles ground each decision, and verification is strict enough that you can run work in parallel and trust the result. p3-stack keeps all of it. It changes only the mechanics, so each step uses what Claude Code and T3 actually have.
+One command, `/p3`, turns on poteto mode. It routes each task to one of pstack's 23 playbooks (bug fix, feature, refactor, babysit a PR, overnight run…), applies its 24 principles, and proves the work before it calls it done. In T3 it uses T3's own tools: parallel threads in their own worktrees, PR watching, schedules, the browser, and simulators.
 
-## What changes from Cursor
-
-| pstack in Cursor | p3-stack in Claude Code + T3 |
-|---|---|
-| Custom Mode keeps `/poteto-mode` on | `/p3` turns it on. A plugin hook adds pstack's one-line reminder to every turn and re-points Claude at the router after compaction. `/p3 off` turns it off. |
-| `Task` subagents with model slugs | Claude's `Agent` tool with a model alias and an `effort` level per role. Roles live in one table you can override with `/p3:setup-pstack`. |
-| Cloud agents on their own VM | A git worktree from your HEAD for each writer. Long-lived PR owners are T3 threads launched with `t3_thread_launch` in their own worktree. |
-| `/loop` polling for PR status | `watch_pull_request` wakes the thread on failed checks, comments, and conflicts. A `schedule_task` heartbeat covers merges, which do not wake a watch. |
-| `/loop 1h` for overnight work | `schedule_task`, which survives a T3 restart. |
-| `control-ui` and simulator skills | T3's `preview_*` browser tools and `device_*` simulators. |
-| Mining Cursor transcripts | `t3_thread_read`, `t3_thread_search`, and Claude's own transcripts. |
-| Second opinions from another vendor | A panel of opus, fable, and sonnet. `delegate_task` adds another T3 provider when you have one. |
-
-Outside T3, in plain Claude Code, every step has a fallback, so p3 works there too.
-
-## Requirements
-
-- **Claude Code 2.1.292 or later** (`claude --version`). That release added the per-subagent `effort` the role table needs.
-- **T3 Code nightly from 2026-10-03 or later** for the orchestration tools (`delegate_task`, `t3_thread_*`, `watch_pull_request`, `schedule_task`). T3 stable 0.0.45 has only the preview, device, and PR link tools. p3 still runs there and says which fallback it took.
-- `git` and `python3` (3.9 or later). `gh` for pull requests. `bun` for the bundled `watch-pr` and `orch` scripts.
+![$p3 in T3's skill picker](docs/images/picker.jpg)
 
 ## Install
 
 ```sh
 git clone https://github.com/sergchil/p3-stack.git
-cd p3-stack
-./install.sh
+cd p3-stack && ./install.sh
 ```
 
-`install.sh` reads T3's provider settings and finds the Claude config dir of every Claude instance, the same way T3 does (`homePath`, else the instance's `CLAUDE_CONFIG_DIR`, else `~/.claude`). It skips instances that are disabled in T3, and also links a `CLAUDE_CONFIG_DIR` exported in your shell (the T3 desktop app does not pass that variable on). In each folder it creates a single symlink, `skills/p3 -> <checkout>/plugin`. Claude Code loads that folder as the plugin `p3@skills-dir`, with its skills, agents, and hooks. The installer writes nothing else: no `settings.json` edits, no marketplace records.
-
-Then start a new Claude thread in T3.
-
-**Update:** `git pull`. The symlink picks up the new version.
-**Check:** `./install.sh --status`.
-**Uninstall:** `./install.sh --uninstall`. Add `--purge` to delete p3's per-session state too.
-
-### Another pstack port installed?
-
-Two routers in one session fight each other. The installer reports any enabled `pstack@…` plugin and any `poteto-mode` or `p3-mode` skill in each config dir, and prints the command to turn it off, for example:
-
-```sh
-claude plugin disable pstack@pstack-claude
-```
-
-To keep the other port everywhere else and turn it off for one repo only, commit this to the repo's `.claude/settings.json`:
-
-```json
-{ "enabledPlugins": { "pstack@pstack-claude": false } }
-```
+Needs Claude Code 2.1.292+ and Python 3.9+. The T3 tools need T3 Code nightly from 2026-10-03; without T3, p3 falls back to plain Claude Code. If another pstack port is installed, the installer says how to turn it off.
 
 ## Use
 
-In a T3 thread with Claude:
+- Type `$p3 <task>` in a T3 thread (or `/p3 <task>`). Poteto mode stays on for the thread; `/p3 off` stops it.
+- More commands: `/p3:setup-pstack` picks models and effort per role, `/p3:poteto-help` says which skill fits, and `/p3:how`, `/p3:why`, `/p3:arena`, `/p3:swarm` and the rest of pstack's skills.
 
-```text
-$p3 the checkout page double-charges on retry. repro first, then fix.
-```
+![Three parallel T3 threads, one worktree each](docs/images/threads.jpg)
+*One request, three changes: p3 launches a T3 thread per change in its own worktree, then reviews all three.*
 
-Pick `$p3` from the composer's skill menu, or type `/p3 <task>` at the start of the message. The mode stays on for the rest of the thread.
-
-```text
-/p3 off
-```
-
-Other entry points are plain commands: `/p3:setup-pstack` (pick models and effort per role), `/p3:poteto-help` (which skill fits), `/p3:how`, `/p3:why`, `/p3:interrogate`, `/p3:architect`, `/p3:arena`, `/p3:swarm`, `/p3:reflect`, and the rest of pstack's skills.
-
-The guide that comes with pstack still applies: [prompting](plugin/skills/poteto-help/references/prompting.md) and [recipes](plugin/skills/poteto-help/references/recipes.md).
-
-### Picking a T3 runtime mode
-
-- **Approval required** asks before every write. Good for a first try.
-- **Auto** and **Full access** approve tool calls without asking. p3 still pauses on its own before force-pushes, deploys, data deletion, and messages to customers. An unattended run (`im stepping away…`) needs one of these modes, because a child can never have more access than its parent.
-- **Plan** works for read-only playbooks. T3 keeps Claude's plan and stops, so approve it and send the next message to continue.
-
-## How it is built
-
-```text
-vendor/pstack/      upstream pstack, byte for byte (version in port/upstream.json)
-port/spec.json      path moves and frontmatter rules
-port/subs/*.json    small mechanical rewrites
-port/overrides/     files rewritten for Claude + T3, pinned by upstream hash
-port/added/         the runtime map, the mode hook, the /p3 alias, the manifest
-plugin/             the generated plugin (committed, so install needs no build)
-```
-
-- Every skill is user-invoked (`disable-model-invocation: true`), and the 24 principles are plain files the router reads by path. Claude's skill list holds about 8,000 characters at a 200k context, and pstack's descriptions alone are about 11,000. This keeps them out of it.
-- `plugin/skills/poteto-mode/references/runtime.md` is the single map from each Cursor mechanism to its Claude Code and T3 equivalent. Playbooks link to its sections instead of repeating them.
-- [docs/PORTING.md](docs/PORTING.md) has the porting rules and the lessons from earlier ports that each override encodes.
+## Uninstall
 
 ```sh
-python3 tools/build.py            # rebuild plugin/
-python3 tools/build.py --check    # fail if plugin/ is stale
-python3 tools/check.py            # static checks on plugin/
-python3 -m unittest discover -s tests
-python3 tools/sync_upstream.py    # pull a new pstack and list exactly what to port
+./uninstall.sh
 ```
 
-Upstream updates: a weekly GitHub Action opens a pull request when pstack changes. See [docs/UPDATING.md](docs/UPDATING.md).
+Removes everything p3 added to each Claude config folder that T3 uses: the plugin link, its session state, and its settings file. Your repos are not touched. Then delete this folder.
 
-## Credit
+## Update
 
-The skills, principles, and language are Lauren Tan's. The Claude Code and T3 wiring is this repo's, with ideas from the other ports listed in [NOTICE.md](NOTICE.md). MIT, see [LICENSE](LICENSE).
+`git pull`. When poteto releases a new pstack, a weekly GitHub workflow opens a pull request that lists exactly what to port ([docs/UPDATING.md](docs/UPDATING.md)).
+
+## Compared with other ports (2026-10-11)
+
+| | [pstack](https://github.com/cursor/plugins/tree/main/pstack) | **p3-stack** | [pstack-t3](https://github.com/creedants/pstack-t3) | [waffle](https://github.com/waffleflopper/p3-stack) | [uzair](https://github.com/uzairansaruzi/p3-stack) | [pstack-claude](https://github.com/michael-denyer/pstack-claude) |
+|---|---|---|---|---|---|---|
+| Runs in | Cursor | Claude in T3 | T3, 4 providers | T3: Claude, Codex | T3 | Claude Code, Codex, Pi, Copilot |
+| pstack version | 0.15.17 | 0.15.17 | 0.15.17 | 0.15.15 | ~0.15.10 | 0.15.15 |
+| Claude in T3 finds the skills | — | ✅ | ⚠️ | ✅ | ❌ | ✅ |
+| Mode stays on (turns, compaction, fork) | ✅ | ✅ | ❌ | ⚠️ | ❌ | ⚠️ |
+| Router reaches the other skills | — | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Uses T3 threads, PR watch, schedules | — | ✅ | ✅ | ✅ | ✅ | — |
+| Each parallel writer in its own worktree | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Safe T3 launches (SHA base, retry keys, merge heartbeat) | — | ✅ | ⚠️ | ❌ | ❌ | — |
+| Upstream sync with drift check + CI | — | ✅ | ⚠️ | ❌ | ❌ | ✅ |
+| Tests passing | 52 | 50 | 1,931 (not run here) | 21 | none | 1,187 |
+| Uninstall | Cursor | ✅ | ✅ | ✅ | ❌ | ✅ |
+
+✅ yes · ⚠️ partly · ❌ no · — not a goal. Evidence, commits, and our own known gaps: [docs/COMPARISON.md](docs/COMPARISON.md). Live tests: [docs/TESTED.md](docs/TESTED.md).
+
+## More
+
+[How it works](docs/HOW-IT-WORKS.md) · [Porting rules](docs/PORTING.md) · [Updating](docs/UPDATING.md)
+
+The skills, principles, and language are Lauren Tan's. The Claude Code and T3 wiring is this repo's, with ideas from the ports in [NOTICE.md](NOTICE.md). MIT, see [LICENSE](LICENSE).
