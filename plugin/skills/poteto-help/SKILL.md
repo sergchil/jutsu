@@ -65,11 +65,12 @@ The default answer is `/jutsu`, which runs most of the others when its steps nee
 | The user wants to | Skill |
 |---|---|
 | Do any non-trivial task with rigor | [`/jutsu`](../../skills/poteto-mode/SKILL.md) |
+| Check that the agent understood their goal and the problem before it starts | [`/jutsu:in-your-own-words`](../../skills/in-your-own-words/SKILL.md) |
 | Know how code works now, or where new code should live | [`/jutsu:how`](../../skills/how/SKILL.md) |
 | Know why code is shaped this way, or where a number came from | [`/jutsu:why`](../../skills/why/SKILL.md) |
 | Understand a change or subsystem, explained plainly | [`/jutsu:teach`](../../skills/teach/SKILL.md) |
 | Catch up on their own recent work on a topic | [`/jutsu:recall`](../../skills/recall/SKILL.md) |
-| Catch up on everything in this chat since their last message, with enough context to decide each action item | [`/jutsu:ketchup`](../../skills/ketchup/SKILL.md) |
+| Catch up on what changed in this chat since their last message, in a few plain sentences and small visuals, with enough context to decide each action item | [`/jutsu:ketchup`](../../skills/ketchup/SKILL.md) |
 | Know what a small diff could break outside itself | [`/jutsu:blast-radius`](../../skills/blast-radius/SKILL.md) |
 | Settle types and module shape before code that crosses a function boundary | [`/jutsu:architect`](../../skills/architect/SKILL.md) |
 | Get several attempts at one brief, merged into the best one | [`/jutsu:arena`](../../skills/arena/SKILL.md) |

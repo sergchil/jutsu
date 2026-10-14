@@ -20,7 +20,9 @@ class BundledScriptsTest(unittest.TestCase):
             install = subprocess.run(["bun", "install", "--frozen-lockfile"], cwd=copy,
                                      capture_output=True, text=True, timeout=300)
             self.assertEqual(install.returncode, 0, install.stdout + install.stderr)
-            run = subprocess.run(["bun", "test"], cwd=copy, capture_output=True, text=True, timeout=300)
+            # orch's tests spawn real git and fake gh processes; under load they pass bun's
+            # 5 s default, which made this suite flaky. 30 s keeps a hung test visible.
+            run = subprocess.run(["bun", "test", "--timeout", "30000"], cwd=copy, capture_output=True, text=True, timeout=300)
             self.assertEqual(run.returncode, 0, run.stdout[-3000:] + run.stderr[-3000:])
             self.assertIn(" 0 fail", run.stdout + run.stderr)
             types = subprocess.run(["bun", "run", "typecheck"], cwd=copy, capture_output=True, text=True, timeout=300)

@@ -40,6 +40,7 @@ Playbooks keep upstream's words. Read them this way.
 - `model`: an alias only: `opus`, `sonnet`, `fable`, or `haiku`. The tool rejects full model ids.
 - `effort`: `low`, `medium`, `high`, `xhigh`, or `max`. Pass it on every call that has a role. Without it the child inherits the session effort.
 - `run_in_background`: true unless you need the result before your next step.
+- **Speed.** There is no speed parameter. Upstream picks a fast or standard slug per spawn. Claude Code has no speed setting per child. Fast mode is a session toggle the user sets with `/fast` (Opus only), and `/fast` sets the main conversation, not a subagent ([fast mode](https://code.claude.com/docs/en/fast-mode), [subagents](https://code.claude.com/docs/en/sub-agents)). Set `model` and `effort` only.
 - `name`: set it for any child you may message or stop. `SendMessage` continues a live child.
 - **Brief.** A child gets only its brief. Open every `jutsu:poteto-agent` brief with the absolute path of the router (`skills/poteto-mode/SKILL.md`, which you know because you read it) and the line `Read it in full before any work.` Then the goal, file pointers instead of pasted context, constraints, and the report format. Never put `$(...)` or backticks that a shell would expand into a brief that a child will paste into a command. Tell every child to run each command in the foreground and never end its turn with a background shell or agent still running, since a Claude child that does can report early. A deadline orders the work; it never waives a step.
 - **Stop what you abandon.** In the agent list `completed` means the completion was notified, not that the process exited. A child with live background work reports completed and keeps writing. Stop it with `TaskStop` (it may be deferred, so load it with `ToolSearch` first) and confirm with `git status` before you give its work to a fresh child.
@@ -85,7 +86,7 @@ Role defaults. A role line in `jutsu-models.md` overrides one. Look for `.claude
 - architect runners: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
 - interrogate reviewers: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
 
-Upstream runs every role at its model's highest reasoning setting, and so do these defaults. `/jutsu:setup-pstack` lowers them for a smaller budget.
+Upstream runs every role at its model's highest reasoning setting, and so do these defaults. `/jutsu:setup-pstack` lowers them for a smaller budget. Per spawn, the router's "Match the model to the job" moves a role's effort up or down from its value here, and a review never goes below `high`.
 
 A value is `<alias> @<effort>`, `inherit` (omit `model` and `effort`), or `t3:<providerInstanceId>/<modelId> @<effort>` for a `delegate_task` target. A value without `@` uses the session effort. An effort a model does not offer falls back to its default, so report the effort the child ran at, not the one you asked for.
 

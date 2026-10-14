@@ -4,6 +4,7 @@
     ".cursor-plugin/",
     ".gitignore",
     "README.md",
+    "plugin.json",
     "LICENSE",
     "assets/",
     "automations/",

@@ -5,6 +5,7 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 ## Understand
 
 - `/jutsu read <thread>. restate the underlying issue in your own words, in plain english.`
+- `/jutsu:in-your-own-words <long or messy ask>`
 - `/jutsu investigate why <symptom>. give me what we know, what data you used, and your best hypotheses. don't change any code yet.`
 - `use /jutsu:how to understand <subsystem>. then use /jutsu:why to find out why it broke recently.`
 - `/jutsu:recall my work on <topic> from last week, then read <issue>.`

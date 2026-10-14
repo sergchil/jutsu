@@ -5,6 +5,8 @@ Upstream bugs this pins:
   worktree holding them could be bucketed safe and removed with --force.
 - cursor/plugins#470: a closed-unmerged PR, or commits that exist nowhere else, made a
   worktree safe.
+The squash-pruned, reused-name, and behind-merged cases come from the open upstream fix
+cursor/plugins#492, so a later re-merge cannot regress them.
 """
 from __future__ import annotations
 
@@ -33,6 +35,9 @@ EXPECTED = {
     "merged-pr": ("clean", "pushed", "safe"),
     "merged-then-more": ("clean", "pushed", "review"),
     "behind": ("clean", "behind", "review"),
+    "behind-merged": ("clean", "behind", "safe"),
+    "squash-pruned": ("clean", "no-remote", "safe"),
+    "reused-name": ("clean", "pushed", "safe"),
 }
 
 
@@ -127,17 +132,40 @@ class WorktreeAuditTest(unittest.TestCase):
         git(behind, "push", "-q", "origin", "behind")
         git(behind, "reset", "-q", "--hard", "HEAD~1")
 
+        # The PR merged at the remote head; this checkout stopped one commit short.
+        behind_merged = worktree("behind-merged")
+        commit(behind_merged, "bm-first")
+        bm_head = commit(behind_merged, "bm-second")
+        git(behind_merged, "push", "-q", "origin", "behind-merged")
+        git(behind_merged, "reset", "-q", "--hard", "HEAD~1")
+
+        # Squash-merged, then the remote branch was deleted.
+        pruned = worktree("squash-pruned")
+        pruned_head = commit(pruned, "pruned-work")
+        git(pruned, "push", "-q", "origin", "squash-pruned")
+        git(pruned, "push", "-q", "origin", "--delete", "squash-pruned")
+
+        # An old closed PR used the same branch name before the merged one.
+        reused = worktree("reused-name")
+        reused_head = commit(reused, "reused-work")
+        git(reused, "push", "-q", "origin", "reused-name")
+
         (base / "prs.json").write_text(json.dumps([
             {"number": 41, "state": "CLOSED", "headRefName": "closed-pr", "headRefOid": "0" * 40},
             {"number": 42, "state": "CLOSED", "headRefName": "closed-pr-unpushed", "headRefOid": "0" * 40},
             {"number": 43, "state": "MERGED", "headRefName": "merged-pr", "headRefOid": merged_head},
             {"number": 44, "state": "MERGED", "headRefName": "merged-then-more", "headRefOid": merged_earlier},
+            {"number": 45, "state": "MERGED", "headRefName": "behind-merged", "headRefOid": bm_head},
+            {"number": 46, "state": "MERGED", "headRefName": "squash-pruned", "headRefOid": pruned_head},
+            {"number": 47, "state": "CLOSED", "headRefName": "reused-name", "headRefOid": "1" * 40},
+            {"number": 48, "state": "MERGED", "headRefName": "reused-name", "headRefOid": reused_head},
         ]))
 
         run = subprocess.run(["bash", str(AUDIT), str(repo)], env=cls.env, capture_output=True,
                              text=True, timeout=120)
         cls.stderr = run.stderr
-        lines = run.stdout.strip().splitlines()
+        # The first line names the base ref the audit compared against.
+        lines = [l for l in run.stdout.strip().splitlines() if not l.startswith("# base:")]
         cls.header = lines[0].split("\t") if lines else []
         cls.rows = {}
         for line in lines[1:]:
@@ -157,7 +185,7 @@ class WorktreeAuditTest(unittest.TestCase):
 
     def test_only_clean_merged_work_is_safe(self):
         safe = sorted(name for name, row in self.rows.items() if row["BUCKET"] == "safe")
-        self.assertEqual(safe, ["clean-on-main", "merged-pr"])
+        self.assertEqual(safe, ["behind-merged", "clean-on-main", "merged-pr", "reused-name", "squash-pruned"])
 
     def test_header_does_not_claim_read_only(self):
         head = "\n".join(AUDIT.read_text().splitlines()[:8])

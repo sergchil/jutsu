@@ -25,7 +25,7 @@ After the sections, attach videos or screenshots when they prove a claim. Full S
 
 **Built-in PR tool.** T3 has no tool that creates a PR, so create, edit, retarget, and mark ready with `gh`. In T3, call `link_pull_request` with each PR's URL as soon as you create or adopt it, one call per stack layer, per [the runtime's Pull requests section](../references/runtime.md#pull-requests). The link puts the PR on the thread. T3 auto-settles a thread once every linked PR has merged or closed, and settling ends its watches, so link every layer before the root merges. Outside T3, skip the link.
 
-**Size and stacks.** Prefer five narrow PRs to one large PR. A stack is a base-branch chain. The root PR targets trunk. Each child branch rebases onto its parent's exact tip and its PR targets the parent branch. Create a child with `gh pr create --base <parent-branch>`, and retarget one with `gh pr edit <pr> --base <parent-branch>`. Branch from trunk only for independent work. Rebase on trunk before substantial stack work.
+**Size and stacks.** Prefer five narrow PRs to one large PR. A stack is a base-branch chain. The root PR targets trunk. Each child branch rebases onto its parent's exact tip and its PR targets the parent branch. As a parent merges, move its child onto trunk per `playbooks/shipping.md` step 4. Create a child with `gh pr create --base <parent-branch>`, and retarget one with `gh pr edit <pr> --base <parent-branch>`. Branch from trunk only for independent work. Rebase on trunk before substantial stack work.
 
 **Readiness.** Open every PR ready, never as a draft. With `gh`, omit `--draft`. If a PR still opens as a draft, run `gh pr ready <number>`. Run `gh pr view <number>` before you refer to PR status.
 
