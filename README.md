@@ -9,7 +9,7 @@
 
 **jutsu** is [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan (poteto), ported to **Claude Code inside [T3 Code](https://github.com/pingdotgg/t3code)**.
 
-One command, `/jutsu`, turns on poteto mode. It routes each task to one of pstack's 23 playbooks (bug fix, feature, refactor, babysit a PR, overnight run…), applies its 24 principles, and proves the work before it calls it done. In T3 it uses T3's own tools: parallel threads in their own worktrees, PR watching, schedules, the browser, and simulators.
+One command, `/jutsu`, turns on poteto mode. It routes each task to one of pstack 0.15.23's 23 playbooks (bug fix, feature, refactor, babysit a PR, overnight run…), applies its 24 principles, and proves the work before it calls it done. In T3 it uses T3's own tools: parallel threads in their own worktrees, PR watching, schedules, the browser, and simulators.
 
 ![$jutsu in T3's skill picker](docs/images/picker.jpg)
 
@@ -42,11 +42,11 @@ Removes everything jutsu added to each Claude config folder that T3 uses: the pl
 
 `git pull`. When poteto releases a new pstack, a weekly GitHub workflow opens a pull request that lists exactly what to port ([docs/UPDATING.md](docs/UPDATING.md)).
 
-## Compared with other ports (2026-10-11)
+## Compared with other ports (2026-10-14)
 
-![jutsu compared with pstack, pstack-t3, both p3-stack ports, and pstack-claude](docs/images/comparison.png)
+![jutsu compared with pstack, pstack-claude, open-pstack, and four T3 ports](docs/images/comparison.png)
 
-Evidence for every cell, commits, and our own known gaps: [docs/COMPARISON.md](docs/COMPARISON.md). Live tests: [docs/TESTED.md](docs/TESTED.md).
+jutsu fixes three pstack bugs that are still open upstream: [#449](https://github.com/cursor/plugins/issues/449), [#470](https://github.com/cursor/plugins/issues/470), and watch-pr on a repo with no CI ([PR #510](https://github.com/cursor/plugins/pull/510)). Evidence for every cell, 11 repos, and our own known gaps: [docs/COMPARISON.md](docs/COMPARISON.md). Live tests: [docs/TESTED.md](docs/TESTED.md).
 
 ## More
 

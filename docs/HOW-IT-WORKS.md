@@ -2,7 +2,7 @@
 
 ## Packaging
 
-jutsu is a Claude Code "skills-dir plugin". `install.sh` puts one symlink, `<claude config dir>/skills/jutsu -> <checkout>/plugin`, into each Claude config dir that T3 uses (it reads them from T3's provider settings). Claude Code then loads the folder as `jutsu@skills-dir`: 27 user-invoked skills, two agents (`jutsu:poteto-agent`, `jutsu:comment-sicko`), and a mode hook. The root `SKILL.md` is the `/jutsu` command, which also appears in T3's `$` skill picker.
+jutsu is a Claude Code "skills-dir plugin". `install.sh` puts one symlink, `<claude config dir>/skills/jutsu -> <checkout>/plugin`, into each Claude config dir that T3 uses (it reads them from T3's provider settings). Claude Code then loads the folder as `jutsu@skills-dir`: 28 user-invoked skills, two agents (`jutsu:poteto-agent`, `jutsu:comment-sicko`), and a mode hook. The root `SKILL.md` is the `/jutsu` command, which also appears in T3's `$` skill picker.
 
 - Every skill sets `disable-model-invocation: true`, so none of them crowd Claude's skill list. The router reads the other skills and the 24 principles as files, by path.
 - `plugin/hooks/jutsu-mode` keeps the mode on: `/jutsu` writes a per-session flag, each later prompt gets pstack's one-line reminder, and a compaction, resume, or fork re-points Claude at the router. A `/jutsu` or `$jutsu` mention in the prompt text, or a `skill://` link to jutsu, turns the mode on too, since T3 expands only the last `$skill` mention and older T3 builds send `$jutsu` as text. A prompt that is only `/jutsu off` or `$jutsu off` turns it off. While the mode is on, each new `jutsu:poteto-agent` child gets the router path through a `SubagentStart` hook. It never blocks a prompt.
