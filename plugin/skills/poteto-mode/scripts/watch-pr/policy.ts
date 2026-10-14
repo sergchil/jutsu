@@ -1,4 +1,5 @@
 import {
+  ChecksUnavailable,
   WatcherQueryError,
   resolveChecks,
   resolveReviewThreads,
@@ -41,6 +42,10 @@ async function mergeAssessment(
       : (commits.find((commit) => commit.oid === facts.headRefOid)?.state ??
         null);
   return {
+    headListed:
+      facts.headRefOid !== null &&
+      commits.some((commit) => commit.oid === facts.headRefOid),
+    anyCommitReported: commits.some((commit) => commit.state !== null),
     hadPreviousPassingCi: commits.some(
       (commit) => commit.oid !== facts.headRefOid && commit.state === "SUCCESS"
     ),
@@ -48,6 +53,80 @@ async function mergeAssessment(
       mergeStateStatus: facts.mergeStateStatus,
       headRollupState,
     }),
+  };
+}
+export type NoChecksConfirmer = (
+  head: Pick<T.PullRequestFacts, "context" | "headRefOid">
+) => boolean;
+// GitHub registers a new head's checks a few seconds after the push. Until
+// then every read looks like a repository with no CI. Another port measured
+// the first check within 9 seconds across 67 pushes, so 60 is a wide margin.
+export const NO_CHECKS_CONFIRM_SECONDS = 60;
+// The reportedState of the stand-in pending check for an unconfirmed head.
+export const NO_CHECKS_REPORTED_STATE = "NO_CHECKS_REPORTED";
+// Confirms a check-less head once the same PR has shown the same head with no
+// checks for NO_CHECKS_CONFIRM_SECONDS. A new head starts the wait again.
+export function noChecksConfirmer(
+  clock: Pick<WatchClock, "now">
+): NoChecksConfirmer {
+  const firstSeen = new Map<
+    T.PrNumber,
+    { readonly headRefOid: string | null; readonly at: number }
+  >();
+  return (head) => {
+    const now = clock.now();
+    const prior = firstSeen.get(head.context.number);
+    if (prior !== undefined && prior.headRefOid === head.headRefOid)
+      return now - prior.at >= NO_CHECKS_CONFIRM_SECONDS;
+    firstSeen.set(head.context.number, {
+      headRefOid: head.headRefOid,
+      at: now,
+    });
+    return false;
+  };
+}
+const neverConfirms: NoChecksConfirmer = () => false;
+// gh and the rollup both found no checks on the head. This is "no CI" only
+// when no commit on the PR ever had a check rollup and GitHub does not refuse
+// the merge. Otherwise the checks have not registered yet, so fail closed and
+// retry. A first sighting reads as one pending stand-in check so nothing
+// reports READY until the confirmer agrees.
+async function noChecksCi(
+  reader: T.GitHubReader,
+  facts: T.PullRequestFacts,
+  source: T.CheckRead["source"],
+  confirm: NoChecksConfirmer
+): Promise<T.CiState> {
+  const merge = await mergeAssessment(reader, facts);
+  if (!merge.headListed)
+    throw new ChecksUnavailable(
+      `no checks reported on head ${facts.headRefOid}, and the head is not in the PR commit list`
+    );
+  if (merge.anyCommitReported || merge.github.kind === "refused")
+    throw new ChecksUnavailable(
+      `no checks reported on head ${facts.headRefOid}, but a commit on this PR has reported checks`
+    );
+  const base = {
+    source,
+    all: [],
+    failed: [],
+    hadPreviousPassingCi: false,
+  } as const;
+  if (confirm(facts))
+    return { ...base, kind: "ci-clean", pending: [], github: merge.github };
+  return {
+    ...base,
+    kind: "ci-pending",
+    pending: [
+      {
+        kind: "pending",
+        name: "no checks reported yet",
+        reportedState: NO_CHECKS_REPORTED_STATE,
+        description: `no checks reported on head ${facts.headRefOid}; counts as no CI once the same head stays check-less for ${NO_CHECKS_CONFIRM_SECONDS}s`,
+        link: "",
+        workflow: "",
+      },
+    ],
   };
 }
 const AUTOMATION_TOKENS = [
@@ -61,6 +140,7 @@ export async function readSnapshot(args: {
   readonly context: T.PrContext;
   readonly pendingHistory: "include" | "omit";
   readonly allowDraft: boolean;
+  readonly confirmNoChecks?: NoChecksConfirmer;
 }): Promise<T.PrSnapshot> {
   const facts = await args.reader.pullRequest(args.context);
   if (facts.state === "MERGED" || facts.mergedAt !== null)
@@ -80,7 +160,14 @@ export async function readSnapshot(args: {
     )
   );
   let ci: T.CiState;
-  if (failed === null && pending !== null && args.pendingHistory === "omit")
+  if (checks.checks.length === 0)
+    ci = await noChecksCi(
+      args.reader,
+      facts,
+      checks.source,
+      args.confirmNoChecks ?? neverConfirms
+    );
+  else if (failed === null && pending !== null && args.pendingHistory === "omit")
     ci = {
       kind: "ci-pending",
       source: checks.source,
@@ -422,6 +509,10 @@ export async function runSimple(args: {
   readonly options: T.PollingOptions;
 }): Promise<T.TerminalVerdict> {
   const stamp = verdictFactory(args.dependencies.clock, args.mode);
+  // A status-only read happens once, so it can never confirm a check-less head.
+  const confirmNoChecks = args.statusOnly
+    ? neverConfirms
+    : noChecksConfirmer(args.dependencies.clock);
   const step = async (): Promise<StepResult<T.TerminalVerdict>> => {
     const rows: T.PrSnapshot[] = [];
     for (const context of args.contexts)
@@ -431,6 +522,7 @@ export async function runSimple(args: {
           context,
           pendingHistory: "include",
           allowDraft: args.options.allowDraft,
+          confirmNoChecks,
         })
       );
     const complete = nonEmpty(rows);
@@ -711,6 +803,7 @@ export async function runQueued(args: {
 }): Promise<T.QueueTerminalVerdict> {
   let state = createQueueState(args.contexts, args.dependencies.clock.now());
   const stamp = verdictFactory(args.dependencies.clock, "queued-stack");
+  const confirmNoChecks = noChecksConfirmer(args.dependencies.clock);
   args.dependencies.emit(
     stamp({ kind: "QUEUE", terminal: false, queue: args.contexts })
   );
@@ -744,6 +837,7 @@ export async function runQueued(args: {
       context,
       pendingHistory: "omit",
       allowDraft: args.options.allowDraft,
+      confirmNoChecks,
     });
     const applied = applyQueueSnapshot(
       state,

@@ -83,6 +83,127 @@ class CheckerTest(unittest.TestCase):
                            "'worktree remove --force'", "'rm -rf'"):
                 self.assertIn(needle, text)
 
+    def test_conflict_markers_in_the_plugin_are_flagged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = build_to(tmp)
+            how = plugin / "skills" / "how" / "SKILL.md"
+            how.write_text(how.read_text() + "<<<<<<< jutsu override\nours\n=======\ntheirs\n>>>>>>> upstream abc\n")
+            text = "\n".join(check.check(plugin))
+            for marker in ("'<<<<<<<'", "'======='", "'>>>>>>>'"):
+                self.assertIn(f"unresolved merge conflict marker {marker}", text)
+
+    def test_allowances_are_per_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = build_to(tmp)
+            runtime = plugin / check.RUNTIME
+            runtime.write_text(runtime.read_text() + "\nUse the `AskQuestion` tool.\n")
+            text = "\n".join(check.check(plugin))
+            self.assertIn(f"{check.RUNTIME}:", text)
+            self.assertIn("'AskQuestion'", text)
+
+    def test_an_allowance_that_excuses_nothing_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = build_to(tmp)
+            runtime = plugin / check.RUNTIME
+            lines = [l for l in runtime.read_text().splitlines(True) if "| `AskQuestion` |" not in l]
+            runtime.write_text("".join(lines))
+            text = "\n".join(check.check(plugin))
+            self.assertIn("on the line with '| `AskQuestion` |' excuses nothing", text)
+
+    def test_worktree_handoff_is_named_only_in_the_runtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = build_to(tmp)
+            how = plugin / "skills" / "how" / "SKILL.md"
+            how.write_text(how.read_text() + "\nThen call `t3_worktree_handoff` to move the thread.\n")
+            runtime = plugin / check.RUNTIME
+            runtime.write_text(runtime.read_text() + "\nDo not call `t3_worktree_handoff`. It stalls the session.\n")
+            text = "\n".join(check.check(plugin))
+            self.assertIn("skills/how/SKILL.md", text)
+            self.assertIn("'t3_worktree_handoff'", text)
+            self.assertNotIn(f"{check.RUNTIME}:", text)
+
+
+class DenyRulesTest(unittest.TestCase):
+    """Every DENY rule proves itself: its bad line hits it, its good line hits no rule."""
+
+    def test_every_rule_has_examples_that_pass(self):
+        self.assertTrue(all(r["bad"] and r["good"] for r in check.DENY))
+        self.assertEqual(check.self_test(), [])
+
+    def test_a_dead_or_over_wide_rule_fails_its_self_test(self):
+        dead = check.rule(r"\bTaskk\b", "Use the Task tool.", "Use the `Agent` tool.")
+        wide = check.rule(r"Agent", "Use the Agent tool.", "Use the `Agent` tool.")
+        problems = "\n".join(check.self_test([dead, wide]))
+        self.assertIn("does not match its own bad example 'Use the Task tool.'", problems)
+        self.assertIn("its good example 'Use the `Agent` tool.' matches rule 'Agent'", problems)
+
+
+def copy_repo(tmp: str) -> Path:
+    import shutil
+    repo = Path(tmp) / "repo"
+    for part in ("vendor", "port", "tools"):
+        shutil.copytree(ROOT / part, repo / part, ignore=shutil.ignore_patterns("__pycache__"))
+    return repo
+
+
+def build_copy(repo: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, str(repo / "tools/build.py"), "--out", str(repo.parent / "out"), *args],
+                          capture_output=True, text=True, timeout=120)
+
+
+class OverrideRulesTest(unittest.TestCase):
+    def test_conflict_marker_in_port_fails_the_build(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = copy_repo(tmp)
+            ov = repo / "port/overrides/skills/how/SKILL.md"
+            n = len(ov.read_text().splitlines())
+            ov.write_text(ov.read_text() + "<<<<<<< jutsu override\nx\n=======\ny\n>>>>>>> upstream z\n")
+            r = build_copy(repo, "--no-lock")
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertIn(f"port/overrides/skills/how/SKILL.md:{n + 1}: unresolved merge conflict marker", r.stderr)
+            self.assertIn(f"port/overrides/skills/how/SKILL.md:{n + 3}: unresolved merge conflict marker '======='",
+                          r.stderr)
+
+    def test_an_override_that_matches_upstream_fails_the_build(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = copy_repo(tmp)
+            vendor = repo / "vendor/pstack"
+            raw = "skills/poteto-mode/scripts/check-plan.mjs"
+            (repo / "port/overrides" / raw).write_bytes((vendor / raw).read_bytes())
+            # The same holds for an override equal to what the build makes of upstream.
+            teach = "skills/teach/SKILL.md"
+            spec = build.load_json(build.SPEC)
+            made = build.apply_subs(teach, build.transform_frontmatter(teach, (vendor / teach).read_text(), spec),
+                                    build.compile_subs(build.load_substitutions()))
+            (repo / "port/overrides" / teach).write_text(made)
+            r = build_copy(repo, "--no-lock")
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            for path in (raw, teach):
+                self.assertIn(f"port/overrides/{path} matches upstream; delete the override and its lock entry",
+                              r.stderr)
+
+    def test_every_override_needs_a_reason_and_every_reason_an_override(self):
+        reasons = json.loads((ROOT / "port/overrides.json").read_text())
+        overrides = {p.relative_to(ROOT / "port/overrides").as_posix()
+                     for p in (ROOT / "port/overrides").rglob("*") if p.is_file() and p.name != ".DS_Store"}
+        self.assertEqual(build.reason_problems(reasons, overrides), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = copy_repo(tmp)
+            path = repo / "port/overrides.json"
+            reasons = json.loads(path.read_text())
+            del reasons["skills/how/SKILL.md"]
+            reasons["skills/gone/SKILL.md"] = {"kind": "runtime", "why": "w.", "upstream": None}
+            reasons["skills/teach/SKILL.md"] = {"kind": "whim", "why": "", "upstream": "#12"}
+            path.write_text(json.dumps(reasons))
+            r = build_copy(repo, "--no-lock")
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            for needle in ("port/overrides/skills/how/SKILL.md has no entry in port/overrides.json",
+                           "port/overrides.json names skills/gone/SKILL.md, which has no override",
+                           "skills/teach/SKILL.md: kind must be one of",
+                           "skills/teach/SKILL.md: why must be one short sentence",
+                           "skills/teach/SKILL.md: upstream must be an issue or PR URL, or null"):
+                self.assertIn(needle, r.stderr)
+
 
 class UpstreamUpdateTest(unittest.TestCase):
     """An upstream change must surface every override and rule that needs porting, in one run."""

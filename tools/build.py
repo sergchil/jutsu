@@ -8,6 +8,10 @@
 Pipeline per upstream file: map path -> transform frontmatter -> apply substitutions
 -> replace with an override when one exists. Then copy port/added/ and generate the
 root router alias. Python 3.9+, stdlib only.
+
+The build fails on an override with no reason in port/overrides.json (or a reason
+with no override), on an override that matches upstream, and on any merge
+conflict marker line under port/.
 """
 from __future__ import annotations
 
@@ -28,6 +32,7 @@ SPEC = ROOT / "port" / "spec.json"
 SUBS = ROOT / "port" / "substitutions.json"
 OVERRIDES = ROOT / "port" / "overrides"
 LOCK = ROOT / "port" / "overrides.lock.json"
+REASONS = ROOT / "port" / "overrides.json"
 ADDED = ROOT / "port" / "added"
 OUT = ROOT / "plugin"
 
@@ -131,13 +136,39 @@ def compile_subs(subs: list) -> list:
     return compiled
 
 
-def apply_subs(out_rel: str, text: str, compiled: list) -> str:
+def apply_subs(out_rel: str, text: str, compiled: list, count: bool = True) -> str:
     for s in compiled:
         if s["files"] and not s["files"].search(out_rel):
             continue
         text, n = s["re"].subn(s["repl"], text)
-        s["hits"] += n
+        if count:
+            s["hits"] += n
     return text
+
+
+REASON_KINDS = ("runtime", "upstream-bug", "lesson", "naming", "other")
+
+
+def reason_problems(reasons: dict, overrides: set) -> list[str]:
+    """Every override needs a reason in port/overrides.json, and every reason a file."""
+    problems = []
+    for out_rel in sorted(overrides - set(reasons)):
+        problems.append(f"port/overrides/{out_rel} has no entry in port/overrides.json; "
+                        "add its kind, why, and upstream link")
+    for out_rel in sorted(set(reasons) - overrides):
+        problems.append(f"port/overrides.json names {out_rel}, which has no override; delete the entry")
+    for out_rel in sorted(set(reasons) & overrides):
+        r = reasons[out_rel]
+        if not isinstance(r, dict) or set(r) != {"kind", "why", "upstream"}:
+            problems.append(f"port/overrides.json {out_rel}: needs exactly kind, why, and upstream")
+            continue
+        if r["kind"] not in REASON_KINDS:
+            problems.append(f"port/overrides.json {out_rel}: kind must be one of {', '.join(REASON_KINDS)}")
+        if not isinstance(r["why"], str) or not r["why"].strip():
+            problems.append(f"port/overrides.json {out_rel}: why must be one short sentence")
+        if r["upstream"] is not None and not str(r["upstream"]).startswith("https://"):
+            problems.append(f"port/overrides.json {out_rel}: upstream must be an issue or PR URL, or null")
+    return problems
 
 
 def bare_command_pattern(names) -> "re.Pattern[str]":
@@ -189,6 +220,11 @@ def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
         if override.exists():
             want = lock.get(out_rel)
             have = sha256(src)
+            ours = override.read_bytes()
+            if ours == src.read_bytes() or (is_text(src) and ours.decode("utf-8", "replace") == apply_subs(
+                    out_rel, transform_frontmatter(out_rel, src.read_text(encoding="utf-8"), spec),
+                    compiled, count=False)):
+                problems.append(f"port/overrides/{out_rel} matches upstream; delete the override and its lock entry")
             if relock is True or (relock and out_rel in relock):
                 lock[out_rel] = have
             elif relock and want != have:
@@ -213,11 +249,16 @@ def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
     for out_rel in sorted(lock):
         if out_rel not in produced and not relock and check_lock:
             problems.append(f"upstream removed the file behind port/overrides/{out_rel}; delete the override and its lock entry")
+    override_files = set()
     for ov in sorted(OVERRIDES.rglob("*")):
-        if ov.is_file():
+        if ov.is_file() and ov.name != ".DS_Store":
             out_rel = ov.relative_to(OVERRIDES).as_posix()
+            override_files.add(out_rel)
             if out_rel not in produced:
                 problems.append(f"port/overrides/{out_rel} matches no upstream file; move it to port/added/ or delete it")
+    problems += reason_problems(load_json(REASONS) if REASONS.exists() else {}, override_files)
+    import check as checker  # same folder; static checks the plugin must pass
+    problems += checker.conflict_markers(ROOT / "port", "port/")
     if relock:
         lock = {k: v for k, v in lock.items() if (OVERRIDES / k).exists()}
         LOCK.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -249,7 +290,6 @@ def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
             problems.append(f"substitution {s['id']} matched nothing; upstream text moved, so update or delete the rule")
     if problems:
         raise BuildError(f"{len(problems)} thing(s) to port after the upstream change:\n  - " + "\n  - ".join(problems))
-    import check as checker  # same folder; static checks the plugin must pass
     found = checker.check(out_dir)
     if found:
         raise BuildError(f"{len(found)} check problem(s) in the built plugin:\n  - " + "\n  - ".join(found[:40]))

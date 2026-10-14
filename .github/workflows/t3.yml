@@ -1,0 +1,62 @@
+name: upstream t3
+
+# Every Monday, regenerate tools/t3-tools.txt from T3 Code's main branch. When T3
+# adds, renames or removes an MCP tool, open a pull request that lists the names and
+# the jutsu files that still mention a removed one. tools/check.py reads the list,
+# so CI on that branch fails while the plugin names a tool T3 no longer has.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: regenerate the T3 tool list
+        id: sync
+        run: |
+          {
+            echo "T3 Code's MCP tool names changed. Port every jutsu file listed next to a removed name,"
+            echo "then check that each added tool needs no mention in runtime.md."
+            echo
+            echo '```text'
+            python3 tools/t3_tools.py --ref main
+            echo '```'
+          } > "$RUNNER_TEMP/t3.md"
+          cat "$RUNNER_TEMP/t3.md"
+          # The header names the pin and moves every week. Open a PR only when a name changed.
+          if diff <(git show HEAD:tools/t3-tools.txt | grep -v '^#') <(grep -v '^#' tools/t3-tools.txt) > /dev/null; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: open the update pull request
+        id: pr
+        if: steps.sync.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: upstream/t3
+          title: Upstream T3 tool names changed
+          body-path: ${{ runner.temp }}/t3.md
+          commit-message: "t3: regenerate tools/t3-tools.txt from T3 main"
+          add-paths: |
+            tools/t3-tools.txt
+            port/t3.json
+      # A pull request opened with GITHUB_TOKEN starts no workflows, so dispatch CI
+      # on the branch; its check lands on the PR's head commit (see upstream.yml).
+      - name: run ci on the update branch
+        if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref upstream/t3

@@ -79,6 +79,64 @@ describe("checks fallback chain", () => {
     );
     expect(reader.calls).toEqual(["checksFastPath", "checkRollupPage:null"]);
   });
+
+  // Adapted from upstream PR #510. An empty read is only a candidate: the
+  // policy still checks every PR commit and waits before counting it clean.
+  it("returns an empty read when gh reports no checks on the branch", async () => {
+    const reader = fakeReader({
+      fastPath: {
+        kind: "unusable",
+        exitCode: 1,
+        stderr: "no checks reported on the 'trunk' branch",
+      },
+    });
+    const read = await resolveChecks(reader, context);
+    expect(read.source).toBe("gh-pr-checks");
+    expect(read.checks).toEqual([]);
+    expect(reader.calls).toEqual(["checksFastPath", "checkRollupPage:null"]);
+  });
+
+  it("returns an empty read when gh lists no checks and the rollup is empty", async () => {
+    const reader = fakeReader({ fastPath: { kind: "checks", checks: [] } });
+    const read = await resolveChecks(reader, context);
+    expect(read.checks).toEqual([]);
+  });
+
+  it("prefers rollup checks over a no-checks message", async () => {
+    const reader = fakeReader({
+      fastPath: {
+        kind: "unusable",
+        exitCode: 1,
+        stderr: "no checks reported on the 'trunk' branch",
+      },
+      rollupPages: [{ checks: [pendingCheck("late")], endCursor: null }],
+    });
+    const read = await resolveChecks(reader, context);
+    expect(read.source).toBe("graphql-rollup");
+    expect(read.checks.map((check) => check.name)).toEqual(["late"]);
+  });
+
+  it("still fails closed on any other exit 1 message", async () => {
+    const reader = fakeReader({
+      fastPath: { kind: "unusable", exitCode: 1, stderr: "HTTP 401: Bad credentials" },
+    });
+    await expect(resolveChecks(reader, context)).rejects.toBeInstanceOf(
+      ChecksUnavailable
+    );
+  });
+
+  it("still fails closed when the no-checks message comes with another exit code", async () => {
+    const reader = fakeReader({
+      fastPath: {
+        kind: "unusable",
+        exitCode: 4,
+        stderr: "no checks reported on the 'trunk' branch",
+      },
+    });
+    await expect(resolveChecks(reader, context)).rejects.toBeInstanceOf(
+      ChecksUnavailable
+    );
+  });
 });
 
 describe("rollup node mapping", () => {

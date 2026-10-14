@@ -626,6 +626,15 @@ export async function resolveChecks(
   } while (after !== null);
   const fallback = nonEmpty(checks);
   if (fallback !== null) return { source: "graphql-rollup", checks: fallback };
+  // gh found no checks on the head commit. That is a candidate empty read,
+  // not proof of "no CI": checks also look absent for a few seconds after a
+  // push. The policy checks every PR commit and waits before trusting it.
+  // Any other empty read, such as a credential failure, still throws.
+  const noChecksReported =
+    fast.kind === "checks" ||
+    ([0, 1, 8].includes(fast.exitCode) &&
+      firstLine(fast.stderr).startsWith("no checks reported on the "));
+  if (noChecksReported) return { source: "gh-pr-checks", checks: [] };
   const suffix =
     fast.kind === "unusable"
       ? `fast path exit=${fast.exitCode}; GraphQL rollup was empty${firstLine(fast.stderr) ? `; ${firstLine(fast.stderr)}` : ""}`

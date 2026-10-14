@@ -1,17 +1,23 @@
 import { describe, expect, it } from "bun:test";
-import { WatcherQueryError } from "./github.ts";
+import { ChecksUnavailable, WatcherQueryError } from "./github.ts";
 import {
+  NO_CHECKS_CONFIRM_SECONDS,
+  NO_CHECKS_REPORTED_STATE,
+  type WatchClock,
   applyQueueSnapshot,
   assessGitHubMerge,
   classifyPr,
   createQueueState,
   evaluateQueue,
+  noChecksConfirmer,
   planQueue,
   queryBackoffSeconds,
   readSnapshot,
   runQueued,
+  runSimple,
   selectTierMajorStackDecision,
 } from "./policy.ts";
+import { renderJson, renderPretty } from "./render.ts";
 import {
   fakeReader,
   failedCheck,
@@ -417,4 +423,229 @@ it("uses the specified retry floor and cap", () => {
   expect(queryBackoffSeconds(1, 1)).toBe(60);
   expect(queryBackoffSeconds(1, 2)).toBe(120);
   expect(queryBackoffSeconds(60, 4)).toBe(300);
+});
+
+describe("a PR with no checks configured", () => {
+  const noChecksMessage = {
+    kind: "unusable",
+    exitCode: 1,
+    stderr: "no checks reported on the 'trunk' branch",
+  } as const;
+  // No commit on the PR has a check rollup: the repository has no CI.
+  const noCi = {
+    fastPath: noChecksMessage,
+    commitRollups: [
+      { oid: "older", state: null },
+      { oid: "head", state: null },
+    ],
+  } as const;
+  function ticking(): WatchClock {
+    let now = 0;
+    return {
+      now: () => now,
+      observedAt: () => new Date(now * 1000).toISOString(),
+      async sleep(seconds) {
+        now += seconds;
+      },
+    };
+  }
+  const run = (
+    reader: GitHubReader,
+    clock: WatchClock,
+    emitted: ProgressVerdict[],
+    overrides: { statusOnly?: boolean; timeout?: number } = {}
+  ) =>
+    runSimple({
+      dependencies: { reader, clock, emit: (verdict) => emitted.push(verdict) },
+      contexts: [context(30)],
+      mode: "single",
+      statusOnly: overrides.statusOnly ?? false,
+      options: { ...options, timeout: overrides.timeout ?? 0 },
+    });
+
+  // Adapted from upstream PR #510: a confirmed check-less head is clean.
+  it("treats a PR with no configured checks as clean once confirmed", async () => {
+    const snapshot = await readSnapshot({
+      reader: fakeReader(noCi),
+      context: context(3),
+      pendingHistory: "include",
+      allowDraft: false,
+      confirmNoChecks: () => true,
+    });
+    expect(snapshot.kind).toBe("open");
+    if (snapshot.kind !== "open") throw new Error("expected open snapshot");
+    expect(snapshot.ci.kind).toBe("ci-clean");
+    expect(snapshot.ci.all).toEqual([]);
+    expect(classifyPr(snapshot)).toMatchObject({ kind: "ready" });
+  });
+
+  it("waits on a first sighting instead of reporting ready", async () => {
+    const snapshot = await readSnapshot({
+      reader: fakeReader(noCi),
+      context: context(3),
+      pendingHistory: "include",
+      allowDraft: false,
+    });
+    expect(snapshot).toMatchObject({
+      kind: "open",
+      ci: {
+        kind: "ci-pending",
+        all: [],
+        pending: [{ reportedState: NO_CHECKS_REPORTED_STATE }],
+      },
+    });
+    expect(classifyPr(snapshot)).toMatchObject({ kind: "waiting" });
+  });
+
+  // Bugbot's finding on upstream PR #510: right after a push, gh says "no
+  // checks reported" because the workflows have not registered yet.
+  it("is not ready right after a push when an earlier PR commit had checks", async () => {
+    const reader = fakeReader({
+      fastPath: noChecksMessage,
+      commitRollups: [
+        { oid: "older", state: "SUCCESS" },
+        { oid: "head", state: null },
+      ],
+    });
+    await expect(
+      readSnapshot({
+        reader,
+        context: context(3),
+        pendingHistory: "include",
+        allowDraft: false,
+        confirmNoChecks: () => true,
+      })
+    ).rejects.toBeInstanceOf(ChecksUnavailable);
+
+    const emitted: ProgressVerdict[] = [];
+    const verdict = await run(reader, ticking(), emitted, { timeout: 600 });
+    expect(verdict.kind).not.toBe("READY");
+    expect(emitted.length).toBeGreaterThan(0);
+    expect(emitted.every((event) => event.kind === "RETRY")).toBe(true);
+  });
+
+  it("fails closed when the head commit has a rollup the readers did not list", async () => {
+    await expect(
+      readSnapshot({
+        reader: fakeReader({
+          fastPath: noChecksMessage,
+          commitRollups: [{ oid: "head", state: "PENDING" }],
+        }),
+        context: context(3),
+        pendingHistory: "omit",
+        allowDraft: false,
+        confirmNoChecks: () => true,
+      })
+    ).rejects.toBeInstanceOf(ChecksUnavailable);
+  });
+
+  it("fails closed when the head commit is missing from the commit list", async () => {
+    await expect(
+      readSnapshot({
+        reader: fakeReader({
+          fastPath: noChecksMessage,
+          commitRollups: [{ oid: "older", state: null }],
+        }),
+        context: context(3),
+        pendingHistory: "include",
+        allowDraft: false,
+        confirmNoChecks: () => true,
+      })
+    ).rejects.toBeInstanceOf(ChecksUnavailable);
+  });
+
+  it("confirms only once the same head has stayed check-less for 60 seconds", () => {
+    expect(NO_CHECKS_CONFIRM_SECONDS).toBe(60);
+    let now = 0;
+    const confirm = noChecksConfirmer({ now: () => now });
+    const head = { context: context(30), headRefOid: "head" };
+    expect(confirm(head)).toBe(false);
+    now = 59;
+    expect(confirm(head)).toBe(false);
+    now = 60;
+    expect(confirm(head)).toBe(true);
+    const pushed = { ...head, headRefOid: "pushed" };
+    expect(confirm(pushed)).toBe(false);
+    now = 119;
+    expect(confirm(pushed)).toBe(false);
+    now = 120;
+    expect(confirm(pushed)).toBe(true);
+    const other = { context: context(31), headRefOid: "head" };
+    expect(confirm(other)).toBe(false);
+  });
+
+  it("reports READY only after the clock passes 60 seconds on the same head", async () => {
+    const clock = ticking();
+    const emitted: ProgressVerdict[] = [];
+    const verdict = await run(fakeReader(noCi), clock, emitted);
+    expect(emitted.map((event) => event.kind)).toEqual(
+      Array.from({ length: 6 }, () => "WAITING")
+    );
+    expect(clock.now()).toBe(60);
+    expect(verdict).toMatchObject({
+      kind: "READY",
+      scope: { pr: { proof: { ci: { kind: "ci-clean", all: [] } } } },
+    });
+  });
+
+  it("times out instead of reporting READY when the deadline is under 60 seconds", async () => {
+    const verdict = await run(fakeReader(noCi), ticking(), [], {
+      timeout: 30,
+    });
+    expect(verdict).toMatchObject({
+      kind: "TIMEOUT",
+      exitCode: 5,
+      reason: { kind: "pending-checks" },
+    });
+  });
+
+  it("holds a queued frontier as pending until the head is confirmed", async () => {
+    const clock = ticking();
+    const emitted: ProgressVerdict[] = [];
+    const running = runQueued({
+      dependencies: {
+        reader: fakeReader(noCi),
+        clock: {
+          ...clock,
+          async sleep(seconds) {
+            await clock.sleep(seconds);
+            if (clock.now() > 60) throw new Error("stop after confirmation");
+          },
+        },
+        emit: (verdict) => emitted.push(verdict),
+      },
+      contexts: [context(30)],
+      options,
+    });
+    await expect(running).rejects.toThrow("stop after confirmation");
+    const waits = emitted.flatMap((event) =>
+      event.kind === "WAITING" ? [event.reason.kind] : []
+    );
+    expect(waits).toEqual(["pending-checks", "merge-queue"]);
+  });
+
+  it("reports status-only as not yet confirmed, in a parseable row", async () => {
+    const clock = ticking();
+    const verdict = await run(fakeReader(noCi), clock, [], {
+      statusOnly: true,
+    });
+    expect(verdict).toMatchObject({
+      kind: "STATUS",
+      exitCode: 0,
+      rows: [
+        {
+          ci: {
+            kind: "ci-pending",
+            pending: [{ reportedState: NO_CHECKS_REPORTED_STATE }],
+          },
+        },
+      ],
+    });
+    expect(clock.now()).toBe(0);
+    expect(renderPretty(verdict)).toContain("| ⏳ 1 pending |");
+    expect(JSON.parse(renderJson(verdict))).toMatchObject({
+      kind: "STATUS",
+      rows: [{ ci: { pending: [{ name: "no checks reported yet" }] } }],
+    });
+  });
 });

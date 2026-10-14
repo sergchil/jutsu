@@ -6,7 +6,8 @@
 Each check encodes a bug found in an earlier pstack port or in T3's source:
 frontmatter that Claude Code rejects or misreads, links that do not resolve,
 unresolved {{plugin}} tokens, Cursor-only mechanisms left in prose, T3 tool names
-that do not exist, and hooks that point at missing or non-executable files.
+that do not exist, hooks that point at missing or non-executable files, and
+unresolved merge conflict markers. The Cursor-only rules test themselves first.
 Python 3.9+, stdlib only.
 """
 from __future__ import annotations
@@ -28,33 +29,143 @@ T3_TOOL_LIKE = re.compile(
     r"link_pull_request|unlink_pull_request|list_thread_pull_requests|html_preview|html_render)`")
 PLUGIN_AGENT_IGNORED_KEYS = {"permissionMode", "hooks", "mcpServers", "initialPrompt"}
 
-# Cursor-only mechanisms that must not survive in prose. (pattern, allowed files)
-# The runtime maps each Cursor term, so its vocabulary table may name them.
+# Cursor-only mechanisms and unsafe text that must not survive in prose.
+#
+# Each rule proves itself (self_test): `bad` is a line the pattern must match, and
+# `good` is the line a port writes instead, which must match no rule. So a pattern
+# cannot rot without its examples failing.
+#
+# `allow` excuses hits line by line: (file, text on the line, reason). The runtime
+# maps each Cursor term, so its vocabulary rows may name them. An allowance that
+# excuses no hit fails the check, so it goes away with the line it was for.
+#
+# `outside` limits a rule to every file but the ones named. Only the
+# t3_worktree_handoff rule uses it: the runtime is the one place that may name the
+# tool, to say not to use it.
 RUNTIME = "skills/poteto-mode/references/runtime.md"
+
+
+def rule(pattern: str, bad: str, good: str, allow=(), outside=()) -> dict:
+    return {"pattern": pattern, "re": re.compile(pattern), "bad": bad, "good": good,
+            "allow": tuple(allow), "outside": tuple(outside)}
+
+
+VOCAB = "the vocabulary table maps the Cursor term"
 DENY = [
-    (r"\bgeneralPurpose\b", (RUNTIME,)),
-    (r"\bAskQuestion\b", (RUNTIME,)),
-    (r"cursor-team-kit", ()),
-    (r"\bcontrol-(?:ui|cli)\b", (RUNTIME,)),
-    (r"agent-transcripts", (RUNTIME,)),
-    (r"~/\.cursor|\.cursor/", ()),
-    (r"\bCustom Mode\b", ()),
-    (r"\bgrok-\d", ()),
-    (r"claude-opus-\d-\d-(?:x?high|max|medium)", ()),
-    (r"subagent_type: \"poteto-agent\"", (RUNTIME,)),
-    (r"Comment Sicko\"", ()),
-    (r"(?<![\w/.-])/poteto-mode\b", ()),
-    (r"pstack-models\.mdc", ()),
-    (r"\bcloud[- ]agents?\b", (RUNTIME,)),
-    (r"command -v origin|\borigin pr |\bOrigin CLI\b", ()),
-    (r"`Task`|\bTask tool\b|\bTask call", (RUNTIME,)),
-    (r"readonly strips MCP", ()),
-    (r"readonly: true", (RUNTIME,)),
-    (r"\{\{plugin\}\}", ()),
+    rule(r"\bgeneralPurpose\b",
+         "Spawn a subagent with `subagent_type: generalPurpose`.",
+         'Spawn an `Agent` with `subagent_type: "general-purpose"`.',
+         allow=[(RUNTIME, "| `generalPurpose` |", VOCAB)]),
+    rule(r"\bAskQuestion\b",
+         "Use the `AskQuestion` tool.",
+         "Use the `AskUserQuestion` tool.",
+         allow=[(RUNTIME, "| `AskQuestion` |", VOCAB)]),
+    rule(r"cursor-team-kit",
+         "Run `/deslop` from `cursor-team-kit` over the diff.",
+         "Deslop the diff per the runtime's Missing companions."),
+    rule(r"\bcontrol-(?:ui|cli)\b",
+         "Browser UIs use `control-ui`.",
+         "Browser UIs use T3's `preview_*` tools.",
+         allow=[(RUNTIME, "| `control-ui`, `control-cli`, a simulator skill |", VOCAB)]),
+    rule(r"agent-transcripts",
+         "Read the `agent-transcripts/` directory the system prompt names.",
+         "Read the transcript per the runtime's History.",
+         allow=[(RUNTIME, "| transcripts, `agent-transcripts/` |", VOCAB)]),
+    rule(r"~/\.cursor|\.cursor/",
+         "Write `.cursor/skills/verify-<app>/SKILL.md`.",
+         "Write `.claude/skills/verify-<app>/SKILL.md`."),
+    rule(r"\bCustom Mode\b",
+         "Mention once that a Custom Mode keeps it on.",
+         "Mention once that `/jutsu` keeps it on for the session."),
+    rule(r"\bgrok-\d",
+         "Use your configured bug-fix model (default `grok-4.7-xhigh-fast`).",
+         "Use the `bug-fix` role in the runtime's Roles."),
+    rule(r"claude-opus-\d-\d-(?:x?high|max|medium)",
+         "Reviewer A runs on `claude-opus-5-5-xhigh`.",
+         'Reviewer A runs with `model: "opus"` and `effort: "xhigh"`.'),
+    rule(r"subagent_type: \"poteto-agent\"",
+         'Explore in subagents with `subagent_type: "poteto-agent"`.',
+         'Explore in subagents with `subagent_type: "jutsu:poteto-agent"`.',
+         allow=[(RUNTIME, '| `subagent_type: "poteto-agent"` |', VOCAB)]),
+    rule(r"Comment Sicko\"",
+         'Spawn it with `subagent_type: "Comment Sicko"`.',
+         'Spawn it with `subagent_type: "jutsu:comment-sicko"`.'),
+    rule(r"(?<![\w/.-])/poteto-mode\b",
+         "Start the task with /poteto-mode.",
+         "Start the task with /jutsu."),
+    rule(r"pstack-models\.mdc",
+         "Read the `pstack-models.mdc` rule.",
+         "Read `jutsu-models.md`."),
+    rule(r"\bcloud[- ]agents?\b",
+         "Hand each slice to a cloud agent.",
+         "Hand each slice to a worker in its own worktree.",
+         allow=[(RUNTIME, "| cloud agent, own VM |", VOCAB)]),
+    rule(r"command -v origin|\borigin pr |\bOrigin CLI\b",
+         "If `command -v origin` succeeds, use `origin pr merge <pr>`.",
+         "Merge with `gh pr merge <pr> --squash`."),
+    rule(r"`Task`|\bTask tool\b|\bTask call",
+         "Launch all reviewers in one message with the Task tool.",
+         "Launch all reviewers in one message with the `Agent` tool.",
+         allow=[(RUNTIME, '| `Task`, subagent, "spawn" |', VOCAB),
+                (RUNTIME, "under its old name, `Task`", "says some tool lists still show the old name")]),
+    rule(r"readonly strips MCP",
+         "Do not use readonly, because readonly strips MCP access.",
+         "An `Agent` child keeps its MCP tools."),
+    rule(r"readonly: true",
+         "Each reviewer gets `readonly: true`.",
+         "Each reviewer gets a read-only brief.",
+         allow=[(RUNTIME, "| `readonly: true` |", VOCAB)]),
+    rule(r"\{\{plugin\}\}",
+         "Read `{{plugin}}/skills/how/SKILL.md`.",
+         "Read `../../skills/how/SKILL.md`."),
     # Deleting a worktree by force or by hand loses untracked and ignored files
     # (cursor/plugins#449). A plain `git worktree remove` that refuses is the stop.
-    (r"worktree remove (?:--force|-f)\b|\brm -rf\b", ()),
+    rule(r"worktree remove (?:--force|-f)\b|\brm -rf\b",
+         "Run `git worktree remove --force <path>`, then `rm -rf` what is left.",
+         "Run a plain `git worktree remove <path>`. It refuses when work is at stake."),
+    # T3's handoff waited up to nine minutes for the continuation, or never started
+    # it (pmwoz/t3-pstack PR #2). The runtime says not to use it.
+    rule(r"\bt3_worktree_handoff\b",
+         "Hand the thread to a new worktree with `t3_worktree_handoff`.",
+         "Create the worktree from your HEAD per the runtime's Isolation.",
+         outside=[RUNTIME]),
 ]
+
+
+def self_test(rules=None) -> list[str]:
+    """Each rule's `bad` line must hit it, and its `good` line must hit no rule."""
+    rules = DENY if rules is None else rules
+    problems = []
+    for r in rules:
+        if not r["re"].search(r["bad"]):
+            problems.append(f"DENY rule {r['pattern']!r}: does not match its own bad example {r['bad']!r}")
+        for other in rules:
+            if other["re"].search(r["good"]):
+                problems.append(f"DENY rule {r['pattern']!r}: its good example {r['good']!r} "
+                                f"matches rule {other['pattern']!r}")
+    return problems
+
+
+# A line git writes for an unresolved merge. `=======` counts only alone on its
+# line, so a longer Markdown heading underline does not.
+CONFLICT_MARKER = re.compile(r"^(?:<{7}|>{7})(?: |$)|^={7}$", re.M)
+
+
+def conflict_markers(root: Path, label: str = "") -> list[str]:
+    """Each conflict-marker line in the text files under root, as `path:line`."""
+    found = []
+    for p in sorted(root.rglob("*")):
+        if not p.is_file() or "node_modules" in p.parts:
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for hit in CONFLICT_MARKER.finditer(text):
+            line = text.count("\n", 0, hit.start()) + 1
+            found.append(f"{label}{p.relative_to(root).as_posix()}:{line}: unresolved merge conflict marker "
+                         f"{hit.group(0).rstrip()!r}; resolve it, then relock")
+    return found
 
 LINK = re.compile(r"\]\(([^)\s#]+)(#[^)]*)?\)")
 CODE_PATH = re.compile(r"`((?:\.\./|\./)?(?:\.\./)*(?:skills|playbooks|references|principles|scripts|agents|hooks)/[A-Za-z0-9_./<>-]+\.(?:md|sh|mjs|ts))`")
@@ -114,14 +225,22 @@ def check(plugin: Path) -> list[str]:
         if bad:
             errors.append(f"{rel(agent)}: plugin agents ignore {sorted(bad)}")
 
+    errors += self_test()
+    errors += conflict_markers(plugin)
+    excused = {(id(d), a): 0 for d in DENY for a in d["allow"]}
     for md in sorted(p for p in plugin.rglob("*.md") if "node_modules" not in p.parts):
         text = md.read_text()
+        lines = text.splitlines()
         r = rel(md)
-        for pattern, allowed in DENY:
-            if r in allowed:
+        for d in DENY:
+            if r in d["outside"]:
                 continue
-            for hit in re.finditer(pattern, text):
+            for hit in d["re"].finditer(text):
                 line = text.count("\n", 0, hit.start()) + 1
+                allowance = next((a for a in d["allow"] if a[0] == r and a[1] in lines[line - 1]), None)
+                if allowance:
+                    excused[(id(d), allowance)] += 1
+                    continue
                 errors.append(f"{r}:{line}: Cursor-only, unresolved, or unsafe text: {hit.group(0)!r}")
         for hit in LINK.finditer(text):
             target = hit.group(1)
@@ -146,6 +265,12 @@ def check(plugin: Path) -> list[str]:
             if name not in T3_TOOLS:
                 line = text.count("\n", 0, hit.start()) + 1
                 errors.append(f"{r}:{line}: not a T3 tool: {name}")
+
+    for d in DENY:
+        for a in d["allow"]:
+            if not excused[(id(d), a)]:
+                errors.append(f"allowance for {d['pattern']!r} in {a[0]} on the line with {a[1]!r} excuses nothing; "
+                              "delete it from DENY in tools/check.py")
 
     # Skill commands are /jutsu:<name> in this plugin. A bare /<name> is upstream's Cursor
     # naming and does not run here.

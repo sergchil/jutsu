@@ -7,7 +7,8 @@ How jutsu turns upstream pstack (Cursor) into a Claude Code plugin that runs wel
 - `vendor/pstack/` is upstream, byte for byte. Never edit it. `tools/sync_upstream.py` refreshes it.
 - `port/spec.json` maps paths, drops Cursor-only frontmatter, and sets which skills the model may invoke.
 - `port/substitutions.json` holds mechanical rewrites for files that need only small changes. Every rule must match at least once, or the build fails.
-- `port/overrides/<plugin path>` replaces a whole file. `port/overrides.lock.json` pins the upstream file each override was merged against. When upstream changes, the build fails until the override is re-merged and `tools/build.py --relock` runs.
+- `port/overrides/<plugin path>` replaces a whole file. `port/overrides.lock.json` pins the upstream file each override was merged against. When upstream changes, `tools/sync_upstream.py` 3-way merges the override, and the build fails until a person reviews it and `tools/build.py --relock <path>` runs.
+- `port/overrides.json` gives each override a reason: `kind` (`runtime`, `upstream-bug`, `lesson`, `naming`, or `other`), a one-sentence `why`, and the `upstream` issue or PR URL or `null`. The build fails on an override without an entry, an entry without an override, and an override that matches upstream.
 - `port/added/<plugin path>` holds files upstream does not have (the runtime, hooks, the `/jutsu` alias, the manifest).
 - `plugin/` is generated. Never edit it by hand.
 
@@ -60,6 +61,13 @@ Each one comes from a real run of a port, or from T3's source. Put each where it
 30. A launched T3 thread starts from a commit SHA. T3 names a new worktree's branch `t3/<hash>` and renames it in the background, so a branch name read from T3 can vanish before the launch runs ("Workspace preparation failed"). Read back each launched thread within a minute.
 31. Keep upstream's bare `/<skill>` commands. The build rewrites them to `/jutsu:<skill>`, so new upstream skills need no edit for naming.
 32. A fork (T3's thread fork) has a new session id. The mode hook restores poteto mode from the last `/jutsu` command in the transcript on `fork`, `resume`, and `compact`.
+33. T3 expands only the last `$skill` mention into a slash command, and older T3 builds send `$jutsu` as plain text. The mode hook also turns the mode on from `UserPromptSubmit` text: `/jutsu` or `$jutsu` as a whole token outside code, or a `skill://` link to jutsu. A prompt that is only `/jutsu off` or `$jutsu off` turns it off.
+34. Claude Code's `SubagentStart` hook reaches the child through `additionalContext` and carries the parent's session id (probed on 2.1.296). The mode hook gives a `jutsu:poteto-agent` child the router path when the mode is on. Briefs still open with the router path, since other child types get nothing.
+35. Never call `t3_worktree_handoff`. Its queued continuation can wait minutes or never start. Launch a thread instead.
+36. zsh expands a word that starts with `=`, so `echo =====` kills a chained command. Quote separators, or use one `Read` per file.
+37. A short `delegate_task` wave stays in the turn: async launches, then `t3_thread_wait` on each child. Several `mode: "wait"` calls run one after another. On a failed wait, end the turn.
+38. Date every harness fact in the runtime with the build it was probed on, or cite its source, so the next T3 or Claude update knows what to re-probe.
+39. Pass `-R <owner>/<repo>` from the PR URL to `gh pr` and `gh run` for a PR that may come from a fork, and name the PR by number or URL, not by branch.
 
 ## Tests
 

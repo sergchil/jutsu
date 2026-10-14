@@ -1,8 +1,9 @@
 name: upstream pstack
 
-# Every Monday, pull the latest pstack into vendor/ and open a pull request that
-# lists exactly what to port. The build on that branch fails until each listed
-# override and rule is re-merged, so nothing drifts silently.
+# Every Monday, pull the latest pstack into vendor/, 3-way merge each override
+# upstream touched, and open a pull request with the upstream commits and the
+# merge result per file. The build on that branch fails until each merged
+# override is reviewed and relocked, so nothing drifts silently.
 
 on:
   schedule:
@@ -24,17 +25,22 @@ jobs:
           python-version: "3.12"
       - name: sync vendor/pstack
         id: sync
+        env:
+          # lets the sync ask gh whether an upstream bug we patch is closed
+          GH_TOKEN: ${{ github.token }}
         run: |
           {
-            echo "Upstream pstack changed. The sync output below lists every override and rule to port."
-            echo "Port each one on this branch, then run \`python3 tools/build.py --relock\` and the tests (docs/UPDATING.md)."
+            echo "Upstream pstack changed. The sync 3-way merged each override upstream touched and lists every item to port."
+            echo "Review each merged override and resolve each conflict on this branch, then run \`python3 tools/build.py --relock <plugin path>\` for it, and the tests (docs/UPDATING.md)."
             echo
             echo '```text'
-            python3 tools/sync_upstream.py
+            python3 tools/sync_upstream.py --summary "$RUNNER_TEMP/summary.md"
             echo '```'
+            echo
+            if [ -f "$RUNNER_TEMP/summary.md" ]; then cat "$RUNNER_TEMP/summary.md"; fi
           } > "$RUNNER_TEMP/sync.md"
           cat "$RUNNER_TEMP/sync.md"
-          if git diff --quiet -- vendor port/upstream.json; then
+          if git diff --quiet -- vendor port/upstream.json port/overrides; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -51,6 +57,7 @@ jobs:
           add-paths: |
             vendor/**
             port/upstream.json
+            port/overrides/**
       # GitHub does not start workflows for a pull request opened with GITHUB_TOKEN,
       # so the update PR would show no checks at all. A workflow_dispatch run is the
       # one event GITHUB_TOKEN may start; its check lands on the PR's head commit,
