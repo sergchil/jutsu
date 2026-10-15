@@ -37,6 +37,12 @@ CLAUDE_DRIVER = "claudeAgent"
 MIN_CLAUDE = (2, 1, 292)
 CONFLICT_PLUGIN_PREFIXES = ("pstack@",)
 CONFLICT_SKILL_DIRS = ("poteto-mode", "p3-mode", "pstack-runtime")
+# Tools the bundled scripts need that neither macOS nor T3 ships. Missing ones get a warning, not a failure.
+TOOLS = (
+    ("bun", "watch-pr (the PR verdict in Babysit and Shipping) and orch (the Orchestrate store) "
+            "will not run. Install it from https://bun.sh."),
+    ("gh", "every PR step (open, watch, merge) and watch-pr need it. Install it from https://cli.github.com."),
+)
 
 
 def expand_home(value: str) -> str:
@@ -195,6 +201,10 @@ def main() -> int:
     elif version < MIN_CLAUDE:
         print(f"warning: Claude Code {'.'.join(map(str, version))} is older than "
               f"{'.'.join(map(str, MIN_CLAUDE))}. Update it with `claude update`.")
+    if not args.uninstall:
+        for tool, why in TOOLS:
+            if not shutil.which(tool):
+                print(f"warning: {tool} is not on PATH. jutsu installs anyway, but {why}")
 
     status = 0
     for config_dir, why in targets:

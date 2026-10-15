@@ -3,6 +3,9 @@ name: ci
 on:
   push:
   pull_request:
+  # upstream.yml dispatches this run on the update branch: a pull request opened
+  # with GITHUB_TOKEN never triggers pull_request or push workflows.
+  workflow_dispatch:
 
 jobs:
   test:

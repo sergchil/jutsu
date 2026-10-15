@@ -1,11 +1,11 @@
-<!-- Source of comparison.png. Keep its rows in step with docs/COMPARISON.md.
-     Render: screenshot the .card element at deviceScaleFactor 2 (Playwright or headless Chrome),
-     then resize to 1600 px wide. -->
+<!-- Source of comparison.png. Keep its rows in step with docs/COMPARISON.md (it shows 8 of its 11 repos).
+     Render: screenshot the .card element at deviceScaleFactor 2 (Playwright Chromium headless,
+     --use-angle=swiftshader), then resize to 1600 px wide (sips --resampleWidth 1600). -->
 <!doctype html>
 <html><head><meta charset="utf-8">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { width: 1600px; background: #0b0b10; font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif; color: #e8e8ef; }
+  body { width: 1800px; background: #0b0b10; font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif; color: #e8e8ef; }
   .card { margin: 0; padding: 0 0 36px; background: #0b0b10; }
   .hero { position: relative; height: 220px; overflow: hidden;
           background: linear-gradient(100deg, #ff6a2b 0%, #f0436f 45%, #9b3cf0 100%); }
@@ -14,23 +14,23 @@
   .hero .txt { position: absolute; left: 56px; top: 44px; }
   .hero h1 { font-size: 64px; font-weight: 800; letter-spacing: -1.5px; color: #fff; }
   .hero p { margin-top: 10px; font-size: 26px; color: rgba(255,255,255,.92); font-weight: 500; }
-  table { margin: 32px 40px 0; width: calc(100% - 80px); border-collapse: separate; border-spacing: 0; font-size: 21px; }
-  th, td { padding: 16px 14px; text-align: center; border-bottom: 1px solid #23232e; }
-  th { font-size: 22px; font-weight: 700; color: #fff; padding-bottom: 6px; border-bottom: none; }
-  th small { display: block; font-size: 15px; font-weight: 500; color: #8b8ba0; margin-top: 4px; padding-bottom: 12px; }
-  td:first-child, th:first-child { text-align: left; color: #c9c9d6; font-weight: 500; width: 430px; padding-left: 20px; }
+  table { margin: 32px 40px 0; width: calc(100% - 80px); border-collapse: separate; border-spacing: 0; font-size: 20px; table-layout: fixed; }
+  th, td { padding: 14px 8px; text-align: center; border-bottom: 1px solid #23232e; vertical-align: middle; }
+  th { font-size: 20px; font-weight: 700; color: #fff; padding-bottom: 6px; border-bottom: none; line-height: 1.15; }
+  th small { display: block; font-size: 14px; font-weight: 500; color: #8b8ba0; margin-top: 4px; padding-bottom: 12px; }
+  td:first-child, th:first-child { text-align: left; color: #c9c9d6; font-weight: 500; width: 380px; padding-left: 16px; line-height: 1.25; }
   .j { background: rgba(240, 67, 111, .10); }
   th.j { background: linear-gradient(180deg, #f0436f, #b83cf0); border-radius: 18px 18px 0 0; }
   th.j small { color: rgba(255,255,255,.85); }
   tr:last-child td.j { border-radius: 0 0 18px 18px; }
   td.j { border-left: 2px solid rgba(240,67,111,.55); border-right: 2px solid rgba(240,67,111,.55); color: #fff; font-weight: 600; }
   tr:last-child td.j { border-bottom: 2px solid rgba(240,67,111,.55); }
-  .b { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; font-size: 22px; font-weight: 800; }
+  .b { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; font-size: 21px; font-weight: 800; }
   .y { background: #16351f; color: #3ee07a; }
   .p { background: #3a2e10; color: #ffc53d; }
   .n { background: #3a1518; color: #ff5c6c; }
   .x { color: #5c5c70; font-size: 26px; }
-  .t { font-size: 19px; color: #c9c9d6; }
+  .t { font-size: 16px; line-height: 1.25; color: #c9c9d6; display: inline-block; }
   td.j .t { color: #fff; }
   .foot { display: flex; justify-content: space-between; align-items: center; margin: 26px 56px 0; font-size: 19px; color: #8b8ba0; }
   .legend span { margin-right: 22px; display: inline-flex; align-items: center; gap: 8px; }
@@ -42,32 +42,31 @@
     <img src="header.jpg">
     <div class="txt">
       <h1>jutsu vs other pstack ports</h1>
-      <p>poteto's pstack, ported to Claude Code inside T3 Code · checked 2026-10-11</p>
+      <p>poteto's pstack, ported to Claude Code inside T3 Code · checked 2026-10-14</p>
     </div>
   </div>
   <table id="tbl"></table>
   <div class="foot">
     <div class="legend">
-      <span><i class="b y">✓</i>yes</span><span><i class="b p">~</i>partly</span><span><i class="b n">✗</i>no</span><span><i class="x">—</i>not a goal</span>
+      <span><i class="b y">✓</i>yes</span><span><i class="b p">~</i>partly or not specified</span><span><i class="b n">✗</i>no, shown by a run or the code</span><span><i class="x">—</i>not a goal</span>
     </div>
     <div class="url">github.com/sergchil/jutsu</div>
   </div>
 </div>
 <script>
-const cols = [["jutsu","sergchil"],["pstack","original · Cursor"],["pstack-t3","creedants"],["p3-stack","waffleflopper"],["p3-stack","uzairansaruzi"],["pstack-claude","michael-denyer"]];
+const cols = [["jutsu","sergchil"],["pstack","original · Cursor"],["pstack-claude","michael-denyer"],["open-pstack","ericlitman"],["t3-pstack","chhoumann"],["t3-pstack","pmwoz"],["pstack-t3","mariusflorescu"],["pstack-t3","creedants"]];
 const rows = [
- ["Runs in", "t:Claude in T3","t:Cursor","t:T3, 4 providers","t:T3: Claude, Codex","t:T3","t:Claude Code, Codex, Pi, Copilot"],
- ["pstack version", "t:0.15.17","t:0.15.17","t:0.15.17","t:0.15.15","t:~0.15.10","t:0.15.15"],
- ["Claude in T3 finds the skills", "y","x","p","y","n","y"],
- ["Mode stays on (turns, compaction, fork)", "y","y","n","p","n","p"],
- ["Router reaches the other skills", "y","x","y","n","n","y"],
- ["Uses T3 threads, PR watch, schedules", "y","x","y","y","y","x"],
- ["Each parallel writer in its own worktree", "y","y","y","n","n","y"],
- ["Safe T3 launches (SHA base, retry keys, merge heartbeat)", "y","x","p","n","n","x"],
- ["Upstream sync with drift check + CI", "y","x","p","n","n","y"],
- ["Fixes upstream's 3 open bugs (#449, #470, #471)", "y","n","n","n","n","p"],
- ["Tests passing", "t:53","t:52","t:1,931 (not run)","t:21","t:none","t:1,187"],
- ["Uninstall", "y","t:Cursor","y","y","n","y"],
+ ["Runs in", "t:Claude in T3","t:Cursor","t:Claude, Codex +5","t:Claude Code, Codex","t:T3: Claude, Codex","t:T3: Claude, Codex","t:T3: Claude, Codex","t:T3, 4 providers"],
+ ["pstack version", "t:0.15.23","t:0.15.23","t:0.15.21","t:0.15.20","t:0.15.21","t:0.15.23","t:0.15.23","t:0.15.23"],
+ ["Mode stays on (turns, compaction, fork)", "y","y","p","p","p","p","p","p"],
+ ["Uses T3 threads, PR watch, schedules", "y","x","x","x","y","y","y","y"],
+ ["Each parallel writer in its own worktree", "y","y","y","p","y","y","p","y"],
+ ["Safe T3 launches (SHA base, retry keys, merge heartbeat)", "y","x","x","x","p","p","p","p"],
+ ["How upstream updates merge", "t:3-way + hash lock","x","t:3-way","t:3-way","t:git merge","t:3-way","t:by hand","t:3-way"],
+ ["Cleanup keeps untracked and ignored files (#449)", "y","n","p","n","p","n","n","n"],
+ ["Closed-PR or unpushed work not called safe (#470)", "y","n","y","n","y","n","n","n"],
+ ["Verdict on a PR in a repo with no CI (#510)", "y","n","y","n","y","n","n","n"],
+ ["Tests run on 2026-10-14", "t:180 pass","t:68 pass","t:not run","t:not run","t:not run","t:22 pass","t:checker only","t:not run"],
 ];
 const sym = {y:'<i class="b y">✓</i>', p:'<i class="b p">~</i>', n:'<i class="b n">✗</i>', x:'<i class="x">—</i>'};
 let h = '<tr><th></th>' + cols.map((c,i)=>`<th class="${i==0?'j':''}">${c[0]}<small>${c[1]}</small></th>`).join('') + '</tr>';

@@ -5,6 +5,7 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 ## Understand
 
 - `/jutsu read <thread>. restate the underlying issue in your own words, in plain english.`
+- `/jutsu:in-your-own-words <long or messy ask>`
 - `/jutsu investigate why <symptom>. give me what we know, what data you used, and your best hypotheses. don't change any code yet.`
 - `use /jutsu:how to understand <subsystem>. then use /jutsu:why to find out why it broke recently.`
 - `/jutsu:recall my work on <topic> from last week, then read <issue>.`
@@ -14,7 +15,7 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 ## Build
 
 - Bug: `/jutsu <symptom>. repro first, then fix and verify.`
-- Bug in an app: `/jutsu repro this with /verify-<app>. if it repros on main, fix it and show me a video as proof.`
+- Bug in an app: `/jutsu repro this with /verify. if it repros on main, fix it and show me a video as proof.`
 - Bug with a cheap test: `/jutsu repro <bug> first. if there's a cheap test path, /jutsu:tdd it. then fix and rerun.`
 - Feature: `/jutsu add <behavior>. <current output> stays byte-identical. verify both.`
 - Refactor: `/jutsu move <code> into one module, zero behavior change. record the current output first and prove it's unchanged after.`

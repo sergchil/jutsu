@@ -54,7 +54,7 @@ Commit it only when the work is ambitious enough that a reviewer needs the trail
 
 ## Audit the log against the transcript
 
-At the end of the run, before handing back, check the log told the truth. Read this run's transcript per [the runtime's History]({{plugin}}/skills/poteto-mode/references/runtime.md#history). In T3, `t3_thread_list` returns `currentThreadId`, and `t3_thread_read` on it with `view: "activity"` shows what ran. Otherwise read this session's file in `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<dir>/`, where `<dir>` is the workspace path encoded as the runtime's History section says, and skip records with `isMeta` set and local-command records. Don't glob across `projects/*/`. That reads unrelated private chats. Walk this run's rows against what actually happened. Each stretch of them begins at one of this run's `start` rows, or at the first row if this run created the log, and ends at the next `start` row of another run:
+At the end of the run, before handing back, check the log told the truth. Read this run's transcript per [the runtime's History]({{plugin}}/skills/poteto-mode/references/runtime.md#history). In T3, `t3_thread_list` returns `currentThreadId`, and `t3_thread_read` on it with `view: "activity"` shows what ran. Walk this run's rows against what actually happened. Each stretch of them begins at one of this run's `start` rows, or at the first row if this run created the log, and ends at the next `start` row of another run:
 
 - Check that every row maps to a real decision or action.
 - Check that each row's evidence resolves and shows what the row claims.
@@ -64,7 +64,7 @@ Correct the log, not the story. The audit never edits or removes a row, even an 
 
 ## Cross-model review of the trail
 
-Before handing back, spawn a subagent on a different model family from the one that did the work (another `Agent` alias, such as `fable` when `opus` did the work, at `effort: "high"` or above). Self-review is not a substitute. Give it the log path and this run's thread id or transcript path. The subagent reads the audit trail and the run's transcript, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky.
+Before handing back, spawn a subagent on a different model family from the one that did the work (another `Agent` alias, such as `fable` when `opus` did the work, at `effort: "high"` or above). When `jutsu-models.md` names a non-Claude T3 target, use it instead, through `delegate_task` per [the runtime's Subagents]({{plugin}}/skills/poteto-mode/references/runtime.md#subagents). Self-review is not a substitute. Give it the log path and this run's thread id or transcript path. The subagent reads the audit trail and the run's transcript, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky.
 
 - Decisions logged with weak or absent evidence.
 - Verification steps skipped or claimed without proof in the transcript.

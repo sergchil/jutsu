@@ -4,9 +4,11 @@
     python3 tools/check.py [PLUGIN_DIR]     # default: plugin/
 
 Each check encodes a bug found in an earlier pstack port or in T3's source:
-frontmatter that Claude Code rejects or misreads, links that do not resolve,
-unresolved {{plugin}} tokens, Cursor-only mechanisms left in prose, T3 tool names
-that do not exist, and hooks that point at missing or non-executable files.
+frontmatter that Claude Code rejects or misreads, a slash-only description that
+reads as a routing rule, links that do not resolve, unresolved {{plugin}} tokens,
+Cursor-only mechanisms left in prose, T3 tool names that are not in
+tools/t3-tools.txt, hooks that point at missing or non-executable files, and
+unresolved merge conflict markers. The rules test themselves first.
 Python 3.9+, stdlib only.
 """
 from __future__ import annotations
@@ -18,43 +20,211 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-T3_TOOLS = {l.strip() for l in (ROOT / "tools" / "t3-tools.txt").read_text().splitlines() if l.strip()}
-# Tool names T3 accepts but that are not separate MCP tools, or older names that other
-# ports used. Listing them here keeps the typo check strict for everything else.
-T3_TOOL_LIKE = re.compile(
-    r"`((?:t3_[a-z_]+)|(?:preview_[a-z_]+)|(?:device_[a-z_]+)|delegate_task|task_status|task_cancel|"
-    r"orchestrator_capabilities|create_threads|schedule_task|list_scheduled_tasks|update_scheduled_task|"
-    r"delete_scheduled_task|run_scheduled_task_now|request_secret|watch_pull_request|unwatch_pull_request|"
-    r"link_pull_request|unlink_pull_request|list_thread_pull_requests|html_preview|html_render)`")
+SPEC = ROOT / "port" / "spec.json"
+
+
+def read_tool_list(path: Path) -> set[str]:
+    """T3's MCP tool names from tools/t3-tools.txt. Lines starting with # are the header."""
+    return {l.strip() for l in path.read_text().splitlines() if l.strip() and not l.startswith("#")}
+
+
+T3_TOOLS = read_tool_list(ROOT / "tools" / "t3-tools.txt")
+# A backticked snake_case word. It names a T3 tool when it has a T3 tool's prefix or
+# shape, or when it is within two edits of a listed tool (a typo). Either way it must
+# be on the list, so a new tool family needs no change here.
+SNAKE = re.compile(r"`([a-z][a-z0-9]*(?:_[a-z0-9]+)+)`")
+T3_SHAPE = re.compile(r"^(?:t3_|preview_|device_|task_|html_|orchestrator_)|_pull_requests?(?:_|$)|_scheduled_tasks?(?:_|$)")
+
+
+def within_two_edits(a: str, b: str) -> bool:
+    """True when Levenshtein(a, b) <= 2. Banded, so it stays cheap."""
+    if abs(len(a) - len(b)) > 2:
+        return False
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i] + [0] * len(b)
+        for j, cb in enumerate(b, 1):
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb))
+        if min(cur) > 2:
+            return False
+        prev = cur
+    return prev[-1] <= 2
+
+
+def unknown_t3_tool(word: str, tools: set[str] = T3_TOOLS) -> bool:
+    """A word that looks like a T3 tool but is not one."""
+    if word in tools:
+        return False
+    return bool(T3_SHAPE.search(word)) or any(within_two_edits(word, t) for t in tools)
+
+
+def model_invocable() -> set[str]:
+    """Skills that keep Claude's auto-invocation (port/spec.json frontmatter.model_invocable)."""
+    try:
+        return set(json.loads(SPEC.read_text())["frontmatter"].get("model_invocable", []))
+    except (OSError, ValueError, KeyError):
+        return set()
+
+
+# A slash-only skill's description shows in the `/` menu and never routes, so a routing
+# rule there ("Use when the user says reflect") reads as if the skill fires on its own
+# (cursor/plugins#367, fix PR cursor/plugins#519).
+ROUTING = re.compile(r"(?i)\buse (?:only )?when\b")
 PLUGIN_AGENT_IGNORED_KEYS = {"permissionMode", "hooks", "mcpServers", "initialPrompt"}
 
-# Cursor-only mechanisms that must not survive in prose. (pattern, allowed files)
-# The runtime maps each Cursor term, so its vocabulary table may name them.
+# Cursor-only mechanisms and unsafe text that must not survive in prose.
+#
+# Each rule proves itself (self_test): `bad` is a line the pattern must match, and
+# `good` is the line a port writes instead, which must match no rule. So a pattern
+# cannot rot without its examples failing.
+#
+# `outside` limits a rule to every file but the ones named. Only the
+# t3_worktree_handoff rule uses it: the runtime is the one place that may name the
+# tool, to say not to use it.
 RUNTIME = "skills/poteto-mode/references/runtime.md"
+
+
+def rule(pattern: str, bad: str, good: str, outside=()) -> dict:
+    return {"pattern": pattern, "re": re.compile(pattern), "bad": bad, "good": good, "outside": tuple(outside)}
+
+
 DENY = [
-    (r"\bgeneralPurpose\b", (RUNTIME,)),
-    (r"\bAskQuestion\b", (RUNTIME,)),
-    (r"cursor-team-kit", ()),
-    (r"\bcontrol-(?:ui|cli)\b", (RUNTIME,)),
-    (r"agent-transcripts", (RUNTIME,)),
-    (r"~/\.cursor|\.cursor/", ()),
-    (r"\bCustom Mode\b", ()),
-    (r"\bgrok-\d", ()),
-    (r"claude-opus-\d-\d-(?:x?high|max|medium)", ()),
-    (r"subagent_type: \"poteto-agent\"", (RUNTIME,)),
-    (r"Comment Sicko\"", ()),
-    (r"(?<![\w/.-])/poteto-mode\b", ()),
-    (r"pstack-models\.mdc", ()),
-    (r"\bcloud[- ]agents?\b", (RUNTIME,)),
-    (r"command -v origin|\borigin pr |\bOrigin CLI\b", ()),
-    (r"`Task`|\bTask tool\b|\bTask call", (RUNTIME,)),
-    (r"readonly strips MCP", ()),
-    (r"readonly: true", (RUNTIME,)),
-    (r"\{\{plugin\}\}", ()),
+    rule(r"\bgeneralPurpose\b",
+         "Spawn a subagent with `subagent_type: generalPurpose`.",
+         'Spawn an `Agent` with `subagent_type: "general-purpose"`.'),
+    rule(r"\bAskQuestion\b",
+         "Use the `AskQuestion` tool.",
+         "Use the `AskUserQuestion` tool."),
+    rule(r"cursor-team-kit",
+         "Run `/deslop` from `cursor-team-kit` over the diff.",
+         "Deslop the diff per the runtime's Missing companions."),
+    rule(r"\bcontrol-(?:ui|cli)\b",
+         "Browser UIs use `control-ui`.",
+         "Browser UIs use T3's `preview_*` tools."),
+    rule(r"agent-transcripts",
+         "Read the `agent-transcripts/` directory the system prompt names.",
+         "Read the transcript per the runtime's History."),
+    # Upstream's ketchup builds charts with Cursor's /visualize, which Claude Code and
+    # T3 do not have.
+    rule(r"(?<![\w/.-])/visualize\b",
+         "Build the chart with `/visualize`.",
+         "Build the chart as an `html_render` page."),
+    rule(r"~/\.cursor|\.cursor/",
+         "Write `.cursor/skills/verify-<app>/SKILL.md`.",
+         "Write `.claude/skills/verify-<app>/SKILL.md`."),
+    rule(r"\bCustom Mode\b",
+         "Mention once that a Custom Mode keeps it on.",
+         "Mention once that `/jutsu` keeps it on for the session."),
+    rule(r"\bgrok-\d",
+         "Use your configured bug-fix model (default `grok-4.7-xhigh-fast`).",
+         "Use the `bug-fix` role in the runtime's Roles."),
+    rule(r"claude-opus-\d-\d-(?:x?high|max|medium)",
+         "Reviewer A runs on `claude-opus-5-5-xhigh`.",
+         'Reviewer A runs with `model: "opus"` and `effort: "xhigh"`.'),
+    rule(r"subagent_type: \"poteto-agent\"",
+         'Explore in subagents with `subagent_type: "poteto-agent"`.',
+         'Explore in subagents with `subagent_type: "jutsu:poteto-agent"`.'),
+    rule(r"Comment Sicko\"",
+         'Spawn it with `subagent_type: "Comment Sicko"`.',
+         'Spawn it with `subagent_type: "jutsu:comment-sicko"`.'),
+    rule(r"(?<![\w/.-])/poteto-mode\b",
+         "Start the task with /poteto-mode.",
+         "Start the task with /jutsu."),
+    rule(r"pstack-models\.mdc",
+         "Read the `pstack-models.mdc` rule.",
+         "Read `jutsu-models.md`."),
+    rule(r"\bcloud[- ]agents?\b",
+         "Hand each slice to a cloud agent.",
+         "Hand each slice to a worker in its own worktree."),
+    rule(r"command -v origin|\borigin pr |\bOrigin CLI\b",
+         "If `command -v origin` succeeds, use `origin pr merge <pr>`.",
+         "Merge with `gh pr merge <pr> --squash`."),
+    rule(r"`Task`|\bTask tool\b|\bTask call",
+         "Launch all reviewers in one message with the Task tool.",
+         "Launch all reviewers in one message with the `Agent` tool."),
+    rule(r"readonly strips MCP",
+         "Do not use readonly, because readonly strips MCP access.",
+         "An `Agent` child keeps its MCP tools."),
+    rule(r"readonly: true",
+         "Each reviewer gets `readonly: true`.",
+         "Each reviewer gets a read-only brief."),
+    rule(r"\{\{plugin\}\}",
+         "Read `{{plugin}}/skills/how/SKILL.md`.",
+         "Read `../../skills/how/SKILL.md`."),
     # Deleting a worktree by force or by hand loses untracked and ignored files
     # (cursor/plugins#449). A plain `git worktree remove` that refuses is the stop.
-    (r"worktree remove (?:--force|-f)\b|\brm -rf\b", ()),
+    rule(r"worktree remove (?:--force|-f)\b|\brm -rf\b",
+         "Run `git worktree remove --force <path>`, then `rm -rf` what is left.",
+         "Run a plain `git worktree remove <path>`. It refuses when work is at stake."),
+    # T3's handoff waited up to nine minutes for the continuation, or never started
+    # it (pmwoz/t3-pstack PR #2). The runtime says not to use it.
+    rule(r"\bt3_worktree_handoff\b",
+         "Hand the thread to a new worktree with `t3_worktree_handoff`.",
+         "Create the worktree from your HEAD per the runtime's Isolation.",
+         outside=[RUNTIME]),
 ]
+
+
+def self_test(rules=None) -> list[str]:
+    """Each rule's `bad` line must hit it, and its `good` line must hit no rule."""
+    rules = DENY if rules is None else rules
+    problems = []
+    for r in rules:
+        if not r["re"].search(r["bad"]):
+            problems.append(f"DENY rule {r['pattern']!r}: does not match its own bad example {r['bad']!r}")
+        for other in rules:
+            if other["re"].search(r["good"]):
+                problems.append(f"DENY rule {r['pattern']!r}: its good example {r['good']!r} "
+                                f"matches rule {other['pattern']!r}")
+    return problems
+
+
+# Examples for the checks that are not DENY rules: (check, input, expected result).
+OTHER_EXAMPLES = [
+    ("routing", "Use when the user says reflect.", True),
+    ("routing", "Use only when asked for TDD.", True),
+    ("routing", "Reflect on the session. Run it with /jutsu:reflect.", False),
+    ("t3 tool", "write_pull_request_guide", True),     # a typo of write_pull_request_guides
+    ("t3 tool", "read_pull_request_guides", True),
+    ("t3 tool", "t3_thread_lunch", True),
+    ("t3 tool", "preview_screenshot", True),          # has a T3 prefix, not a T3 tool
+    ("t3 tool", "write_pull_request_guides", False),
+    ("t3 tool", "t3_thread_launch", False),
+    ("t3 tool", "run_in_background", False),
+    ("t3 tool", "subagent_type", False),
+]
+
+
+def self_test_other(tools: set[str] = T3_TOOLS) -> list[str]:
+    """The routing and T3 tool checks prove themselves on fixed examples."""
+    problems = []
+    for kind, text, want in OTHER_EXAMPLES:
+        got = bool(ROUTING.search(text)) if kind == "routing" else unknown_t3_tool(text, tools)
+        if got != want:
+            problems.append(f"{kind} check: {text!r} should {'' if want else 'not '}be flagged")
+    return problems
+
+
+# A line git writes for an unresolved merge. `=======` counts only alone on its
+# line, so a longer Markdown heading underline does not.
+CONFLICT_MARKER = re.compile(r"^(?:<{7}|>{7})(?: |$)|^={7}$", re.M)
+
+
+def conflict_markers(root: Path, label: str = "") -> list[str]:
+    """Each conflict-marker line in the text files under root, as `path:line`."""
+    found = []
+    for p in sorted(root.rglob("*")):
+        if not p.is_file() or "node_modules" in p.parts:
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for hit in CONFLICT_MARKER.finditer(text):
+            line = text.count("\n", 0, hit.start()) + 1
+            found.append(f"{label}{p.relative_to(root).as_posix()}:{line}: unresolved merge conflict marker "
+                         f"{hit.group(0).rstrip()!r}; resolve it, then relock")
+    return found
 
 LINK = re.compile(r"\]\(([^)\s#]+)(#[^)]*)?\)")
 CODE_PATH = re.compile(r"`((?:\.\./|\./)?(?:\.\./)*(?:skills|playbooks|references|principles|scripts|agents|hooks)/[A-Za-z0-9_./<>-]+\.(?:md|sh|mjs|ts))`")
@@ -88,6 +258,7 @@ def check(plugin: Path) -> list[str]:
     except (OSError, ValueError) as exc:
         errors.append(f"plugin.json: {exc}")
 
+    invocable = model_invocable()
     for skill in sorted(plugin.glob("skills/*/SKILL.md")):
         fm = frontmatter(skill.read_text())
         name = skill.parent.name
@@ -100,8 +271,15 @@ def check(plugin: Path) -> list[str]:
             errors.append(f"{rel(skill)}: description is {len(desc)} chars (max 1024)")
         if desc.startswith("`"):
             errors.append(f"{rel(skill)}: a description starting with a backtick must be quoted")
-        if fm.get("disable-model-invocation") != "true":
-            errors.append(f"{rel(skill)}: jutsu skills are user-invoked (disable-model-invocation: true)")
+        user_only = fm.get("disable-model-invocation") == "true"
+        if name in invocable and user_only:
+            errors.append(f"{rel(skill)}: port/spec.json lists it as model_invocable, so drop disable-model-invocation")
+        if name not in invocable and not user_only:
+            errors.append(f"{rel(skill)}: jutsu skills are user-invoked (disable-model-invocation: true) "
+                          "unless port/spec.json lists them in model_invocable")
+        if user_only and ROUTING.search(desc):
+            errors.append(f"{rel(skill)}: a slash-only description must not read as a routing rule "
+                          f"({ROUTING.search(desc).group(0)!r}); say what it does and how to run it")
     root = frontmatter((plugin / "SKILL.md").read_text()) if (plugin / "SKILL.md").exists() else {}
     if root.get("name") != "jutsu":
         errors.append("SKILL.md: the root alias must be named jutsu")
@@ -114,13 +292,16 @@ def check(plugin: Path) -> list[str]:
         if bad:
             errors.append(f"{rel(agent)}: plugin agents ignore {sorted(bad)}")
 
+    errors += self_test()
+    errors += self_test_other()
+    errors += conflict_markers(plugin)
     for md in sorted(p for p in plugin.rglob("*.md") if "node_modules" not in p.parts):
         text = md.read_text()
         r = rel(md)
-        for pattern, allowed in DENY:
-            if r in allowed:
+        for d in DENY:
+            if r in d["outside"]:
                 continue
-            for hit in re.finditer(pattern, text):
+            for hit in d["re"].finditer(text):
                 line = text.count("\n", 0, hit.start()) + 1
                 errors.append(f"{r}:{line}: Cursor-only, unresolved, or unsafe text: {hit.group(0)!r}")
         for hit in LINK.finditer(text):
@@ -141,9 +322,9 @@ def check(plugin: Path) -> list[str]:
             if not any((b / target).exists() for b in bases):
                 line = text.count("\n", 0, hit.start()) + 1
                 errors.append(f"{r}:{line}: path does not resolve: {target}")
-        for hit in T3_TOOL_LIKE.finditer(text):
+        for hit in SNAKE.finditer(text):
             name = hit.group(1)
-            if name not in T3_TOOLS:
+            if unknown_t3_tool(name):
                 line = text.count("\n", 0, hit.start()) + 1
                 errors.append(f"{r}:{line}: not a T3 tool: {name}")
 

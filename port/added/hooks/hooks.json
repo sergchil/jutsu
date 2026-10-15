@@ -8,6 +8,9 @@
     ],
     "SessionStart": [
       { "matcher": "resume|fork|compact", "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/jutsu-mode\" start", "timeout": 10 } ] }
+    ],
+    "SubagentStart": [
+      { "matcher": "^jutsu:poteto-agent$", "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/jutsu-mode\" subagent", "timeout": 10 } ] }
     ]
   }
 }

@@ -1,0 +1,277 @@
+{
+  "agents/comment-sicko.md": {
+    "kind": "naming",
+    "upstream": null,
+    "why": "Names the how and why skills by file path, because jutsu skills are not in the model's skill list."
+  },
+  "agents/poteto-agent.md": {
+    "kind": "naming",
+    "upstream": null,
+    "why": "/poteto-mode becomes /jutsu, Task spawns become Agent spawns, and the router is read by path."
+  },
+  "skills/architect/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Runners come from jutsu-models.md and the runtime's Roles instead of Cursor's pstack-models.mdc rule."
+  },
+  "skills/architect/references/runner-prompt.md": {
+    "kind": "naming",
+    "upstream": null,
+    "why": "Links the architect skill and each principle by path, because they are files here."
+  },
+  "skills/arena/SKILL.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Runners take model and effort from jutsu-models.md, and each writer gets a worktree from HEAD (lesson 4)."
+  },
+  "skills/automate-me/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Uses Claude Code skill dirs, Claude transcripts, and AskUserQuestion limits instead of Cursor's create-skill, .cursor paths, and AskQuestion."
+  },
+  "skills/create-verification-skill/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Generated skills go to .claude/skills/ and drive the app with T3's preview and device tools."
+  },
+  "skills/figure-it-out/SKILL.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "The todo list falls back to the runtime's file (lesson 27), and skills and principles are linked by path."
+  },
+  "skills/how/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Cursor's readonly generalPurpose Task becomes an Agent with a read-only brief, and explorers use Explore."
+  },
+  "skills/interrogate/SKILL.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Reviewers run as Agent or delegate_task at high effort or above and record what they actually ran at (lessons 11, 12)."
+  },
+  "skills/ketchup/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "T3 renders Mermaid and tables, and a read-only catch-up cannot take screenshots, so visuals use those and no placeholder box."
+  },
+  "skills/maintain-verification-skill/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Uses .claude/skills paths, Explore source readers, and T3's preview or device tools for the live pass."
+  },
+  "skills/no-comments/SKILL.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Spawns jutsu:comment-sicko through Agent at high effort or above (lesson 12) and reads architect by path."
+  },
+  "skills/poteto-help/SKILL.md": {
+    "kind": "naming",
+    "upstream": null,
+    "why": "Rewritten for jutsu: /jutsu commands, AskUserQuestion, and jutsu's own pages instead of Cursor's guide."
+  },
+  "skills/poteto-help/references/prompting.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Cursor's /loop advice becomes a finish-line predicate, or Claude's /goal."
+  },
+  "skills/poteto-help/references/recipes.md": {
+    "kind": "naming",
+    "upstream": null,
+    "why": "Example prompts use /jutsu commands and Claude Code or T3 mechanisms."
+  },
+  "skills/poteto-mode/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "The router gains the jutsu preamble that points at the runtime map and says skills are files."
+  },
+  "skills/poteto-mode/playbooks/authoring-a-skill.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Cursor's built-in create-skill becomes how to write a Claude Code skill."
+  },
+  "skills/poteto-mode/playbooks/autonomous-run.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Wakes come from the runtime's Waking: watch_pull_request and schedule_task in T3, /loop outside it."
+  },
+  "skills/poteto-mode/playbooks/autopilot-full.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Drops Origin and cloud VMs; owners report by queued t3_thread_send, and holds interrupt each owner (lessons 17, 18, 24)."
+  },
+  "skills/poteto-mode/playbooks/autopilot-stack.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Stops writers before a rebase, and unwatches PRs and deletes scheduled ticks before delivery (lessons 2, 6)."
+  },
+  "skills/poteto-mode/playbooks/babysit.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Runs in a top-level thread, wakes on watch_pull_request, stops writers before a push, and drops Origin (lessons 2, 7, 8, 9, 22)."
+  },
+  "skills/poteto-mode/playbooks/bug-fix.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Models come from the runtime's Roles and proof from its Proof surfaces instead of grok defaults and Cursor control skills."
+  },
+  "skills/poteto-mode/playbooks/eval.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Reads candidate transcripts per the runtime's History instead of Cursor's agent-transcripts."
+  },
+  "skills/poteto-mode/playbooks/feature.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "The feature model comes from the runtime's Roles, and skills and principles are linked by path."
+  },
+  "skills/poteto-mode/playbooks/hillclimb.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "The hillclimb model comes from the runtime's Roles, and skills and principles are linked by path."
+  },
+  "skills/poteto-mode/playbooks/multi-phase-plan.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Evidence per lane instead of a PNG for every PR, real T3 preview limits, roles from the runtime, and lane worktree removal."
+  },
+  "skills/poteto-mode/playbooks/opening-a-pr.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "gh as the forge, T3 PR linking, the user's T3 writing-style settings, and no second worktree inside a T3 worktree."
+  },
+  "skills/poteto-mode/playbooks/orchestrate.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Workers are background jutsu:poteto-agent children or launched T3 threads instead of cloud agents, and the store is .jutsu/<slug>/."
+  },
+  "skills/poteto-mode/playbooks/pause-safely.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Stops each child with task_cancel and checks git status (lessons 1, 17), and writes the resume note under .jutsu/."
+  },
+  "skills/poteto-mode/playbooks/perf-issue.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Traces come from the runtime's Proof surfaces and the model from its Roles."
+  },
+  "skills/poteto-mode/playbooks/prototype.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Screenshots come from the runtime's Proof surfaces instead of a Cursor control skill."
+  },
+  "skills/poteto-mode/playbooks/refactoring.md": {
+    "kind": "naming",
+    "upstream": null,
+    "why": "Links the how skill and each principle by path, because they are files here."
+  },
+  "skills/poteto-mode/playbooks/runtime-forensics.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Live capture uses the runtime's Proof surfaces, and CDP eval is T3's preview_evaluate."
+  },
+  "skills/poteto-mode/playbooks/session-pickup.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Finds the prior trail in .jutsu/ resume notes, T3 threads, and Claude transcripts, and todos in .audit/<slug>.todo.md (lesson 21)."
+  },
+  "skills/poteto-mode/playbooks/shipping.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Runs in a top-level thread, stops writers before a merge, watches with watch_pull_request, and drops Origin (lessons 2, 6, 7)."
+  },
+  "skills/poteto-mode/playbooks/visual-parity.md": {
+    "kind": "lesson",
+    "upstream": null,
+    "why": "Worktrees come from HEAD, not Agent isolation (lesson 4), and proof from the runtime's Proof surfaces."
+  },
+  "skills/poteto-mode/playbooks/worktree-cleanup.md": {
+    "kind": "upstream-bug",
+    "upstream": "https://github.com/cursor/plugins/issues/449",
+    "why": "Never removes a worktree with --force or rm -rf, and gets approval for untracked and ignored files first (#449, #470)."
+  },
+  "skills/poteto-mode/scripts/bootstrap.ts": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Installs only production deps on first run (about 240 KB instead of 37 MB), since the plugin dir is the user's checkout."
+  },
+  "skills/poteto-mode/scripts/check-plan.mjs": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "jutsu program markers, a working --help, unfilled <placeholder> detection, and screenshots required only for lanes that save an image."
+  },
+  "skills/poteto-mode/scripts/check-plan.test.ts": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Upstream's sample plan uses Cursor markers; adds tests for --help, placeholders, and UI-only screenshots."
+  },
+  "skills/poteto-mode/scripts/watch-pr/github.test.ts": {
+    "kind": "upstream-bug",
+    "upstream": "https://github.com/cursor/plugins/pull/510",
+    "why": "Pins the no-checks read (#510) and the two review-thread cursor guards upstream's #484 fix lacks."
+  },
+  "skills/poteto-mode/scripts/watch-pr/github.ts": {
+    "kind": "upstream-bug",
+    "upstream": "https://github.com/cursor/plugins/pull/510",
+    "why": "Reads gh's \"no checks reported\" as an empty read (#510), and keeps two review-thread cursor guards upstream's #484 fix lacks."
+  },
+  "skills/poteto-mode/scripts/watch-pr/policy.test.ts": {
+    "kind": "upstream-bug",
+    "upstream": "https://github.com/cursor/plugins/pull/510",
+    "why": "Pins the no-CI verdict on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+  },
+  "skills/poteto-mode/scripts/watch-pr/policy.ts": {
+    "kind": "upstream-bug",
+    "upstream": "https://github.com/cursor/plugins/pull/510",
+    "why": "Confirms no CI over every PR commit, so watch-pr settles on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+  },
+  "skills/poteto-mode/scripts/watch-pr/render.ts": {
+    "kind": "upstream-bug",
+    "upstream": null,
+    "why": "Prints the action for the new behind-base blocker, so a PR behind a base that requires an up-to-date head is never READY."
+  },
+  "skills/poteto-mode/scripts/watch-pr/types.ts": {
+    "kind": "upstream-bug",
+    "upstream": "https://github.com/cursor/plugins/pull/510",
+    "why": "Allows an empty check list, which the no-CI verdict needs (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+  },
+  "skills/poteto-mode/scripts/worktree-audit.sh": {
+    "kind": "upstream-bug",
+    "upstream": "https://github.com/cursor/plugins/issues/449",
+    "why": "Fixes #449 and #470, covers #492's cases, and buckets T3-managed worktrees so cleanup leaves them to T3."
+  },
+  "skills/recall/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "History comes from T3 threads and Claude transcripts instead of ~/.cursor/projects, mined by read-only haiku children."
+  },
+  "skills/reflect/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Finds this session's Claude transcript per the runtime's History and runs reviewers as general-purpose Agent calls."
+  },
+  "skills/setup-pstack/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Writes jutsu-models.md with Agent aliases and effort levels, and reads T3's orchestrator_capabilities, instead of a Cursor rule."
+  },
+  "skills/show-me-your-work/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Reads the run's transcript per the runtime's History and picks a cross-family Agent reviewer at high effort or above."
+  },
+  "skills/swarm/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Workers run locally as general-purpose Agent children in their own worktrees instead of Cursor cloud agents."
+  },
+  "skills/teach/SKILL.md": {
+    "kind": "naming",
+    "upstream": null,
+    "why": "Links the how, why, and unslop skills by path, because they are files here."
+  },
+  "skills/why/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "Investigators are general-purpose Agent calls that keep MCP tools, and MCPs come from the tool list, not Cursor's mcps/ dir."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "substitutions": [
+    {
+      "id": "fit-skills-1",
+      "pattern": "For TypeScript syntax, see the `typescript-best-practices` skill.",
+      "replacement": "For TypeScript syntax, read the **typescript-best-practices** skill (`{{plugin}}/skills/typescript-best-practices/SKILL.md`).",
+      "files": "^principles/principle-type-system-discipline\\.md$",
+      "regex": false
+    }
+  ]
+}

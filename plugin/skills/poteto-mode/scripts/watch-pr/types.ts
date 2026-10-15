@@ -86,9 +86,11 @@ export type Check =
     });
 export type FailedCheck = Extract<Check, { readonly kind: "failed" }>;
 export type PendingCheck = Extract<Check, { readonly kind: "pending" }>;
+// `checks` is empty only when gh said "no checks reported" and the rollup
+// listed nothing. The policy decides whether that means "no CI".
 export interface CheckRead {
   readonly source: "gh-pr-checks" | "graphql-rollup";
-  readonly checks: NonEmpty<Check>;
+  readonly checks: readonly Check[];
 }
 export interface CommitRollup {
   readonly oid: string;
@@ -115,7 +117,7 @@ export type GitHubMergeAllowed =
 export type GitHubMergeAssessment = GitHubMergeAllowed | GitHubMergeRefusal;
 interface CiBase {
   readonly source: CheckRead["source"];
-  readonly all: NonEmpty<Check>;
+  readonly all: readonly Check[];
   readonly hadPreviousPassingCi: boolean;
 }
 export type CiFailing = CiBase & {
@@ -178,7 +180,8 @@ export interface MergedPr {
 export type MergeGateReason =
   | "closed-without-merge"
   | "draft-pr"
-  | "changes-requested";
+  | "changes-requested"
+  | "behind-base";
 export type MergeBlocker =
   | {
       readonly kind: "merge-conflicts";

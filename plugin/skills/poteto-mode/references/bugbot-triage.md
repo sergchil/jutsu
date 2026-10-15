@@ -2,6 +2,8 @@
 
 Use this reference when the Babysit playbook (`../playbooks/babysit.md`) handles Bugbot or review-automation comments. The goal is not to ignore Bugbot by default. The goal is to stop treating every comment as a required code change.
 
+Also read `.jutsu/bugbot-triage.local.md` under the store root ([the runtime's Store](runtime.md#store)) when it exists. It holds this repo's learned patterns in the format below. This file is rebuilt from upstream on every update, so new patterns go to the local file, never here.
+
 ## Decision rubric
 
 Classify each Bugbot thread before acting:
@@ -85,7 +87,7 @@ Historical data showed humans sometimes dismiss security/data-flow comments. Tre
 
 ## Candidate learnings from recent babysits
 
-Append new candidate learnings here during or after babysitting when they look team-useful but not yet mature. Prefer promoting recurring candidates into the section above once several PRs confirm the pattern.
+Append new candidate learnings to `.jutsu/bugbot-triage.local.md` during or after babysitting, not to this file. Promote a candidate there to `recurring` once several PRs confirm the pattern.
 
 ### Manual reimplementations of native browser behavior
 

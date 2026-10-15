@@ -203,6 +203,36 @@ class InstallTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         self.assertTrue(self.link(self.default).is_symlink())
 
+    def test_warns_but_installs_when_bun_and_gh_are_missing(self):
+        # An empty PATH dir: CI runners ship gh in /usr/bin, so /usr/bin:/bin is not enough.
+        empty = self.home / "empty-bin"
+        empty.mkdir()
+        self.env["PATH"] = str(empty)
+        r = self.run_install()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue(self.link(self.default).is_symlink())
+        self.assertIn("warning: bun is not on PATH", r.stdout)
+        for feature in ("watch-pr", "orch", "Babysit", "Orchestrate", "https://bun.sh"):
+            self.assertIn(feature, r.stdout)
+        self.assertIn("warning: gh is not on PATH", r.stdout)
+
+    def test_no_tool_warning_when_bun_and_gh_are_on_path(self):
+        bin_dir = self.home / "bin"
+        bin_dir.mkdir()
+        for tool in ("bun", "gh"):
+            (bin_dir / tool).write_text("#!/bin/sh\nexit 0\n")
+            (bin_dir / tool).chmod(0o755)
+        self.env["PATH"] = f"{bin_dir}:/usr/bin:/bin"
+        r = self.run_install()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertNotIn("bun is not on PATH", r.stdout)
+        self.assertNotIn("gh is not on PATH", r.stdout)
+
+    def test_uninstall_does_not_warn_about_tools(self):
+        r = self.run_install("--uninstall")
+        self.assertNotIn("bun is not on PATH", r.stdout)
+        self.assertNotIn("gh is not on PATH", r.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

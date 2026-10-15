@@ -2,8 +2,8 @@
   "substitutions": [
     {
       "id": "B4-1",
-      "pattern": "Start by finding the relevant code. Use Glob",
-      "replacement": "This exploration is read-only. Do not edit files, commit, or push.\n\nStart by finding the relevant code. Use Glob",
+      "pattern": "Focus on your assigned angle and go deep.",
+      "replacement": "Focus on your assigned angle and go deep.\n\nThis exploration is read-only. Do not edit files, commit, or push.",
       "files": "^skills/how/references/explorer-prompt\\.md$",
       "regex": false
     },

@@ -3,10 +3,17 @@
 # Cursor's Custom Mode keeps it on, and re-points the model at the router after a
 # compaction or resume.
 #
-#   jutsu-mode expand   UserPromptExpansion: /jutsu or /jutsu:poteto-mode turns the mode on, "off" turns it off
-#   jutsu-mode prompt   UserPromptSubmit: one-line reminder while the mode is on
-#   jutsu-mode start    SessionStart: after compact, reread the router; after resume or fork, a one-line
-#                    reminder. A fork has a new session id, so the state is restored from its history.
+#   jutsu-mode expand    UserPromptExpansion: /jutsu or /jutsu:poteto-mode turns the mode on, "off" turns it off
+#   jutsu-mode prompt    UserPromptSubmit: a /jutsu or $jutsu token that starts the prompt or a line, or
+#                     a skill:// link to jutsu, turns the mode on; a mention inside a sentence does not.
+#                     A prompt that is only "/jutsu off" or "$jutsu off" turns it off. Then a one-line
+#                     reminder while the mode is on.
+#   jutsu-mode start     SessionStart: after compact, reread the router; after resume or fork, a one-line
+#                     reminder. A fork has a new session id, so the state is restored from its history.
+#   jutsu-mode subagent  SubagentStart: a jutsu:poteto-agent child of a session in the mode gets the router path.
+#
+# The prompt path exists because T3 expands only the last $skill mention into a slash command,
+# so UserPromptExpansion never sees an earlier one.
 #
 # It never blocks: every path exits 0, and it prints nothing it cannot stand behind.
 # State is one file per session under ${CLAUDE_PLUGIN_DATA}/sessions.
@@ -16,6 +23,58 @@ input=$(cat 2>/dev/null) || exit 0
 
 field() {
   printf '%s' "$input" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\\([^\"\\\\]*\\)\".*/\\1/p" | head -n 1
+}
+
+# Prints "on", "off", or nothing for the prompt text of a UserPromptSubmit payload.
+# It decodes the JSON string, drops fenced code blocks and inline code spans, then looks
+# for /jutsu or $jutsu as a whole token at the start of a line, or a skill:// link to
+# jutsu. "/jutsu:how", "foo/jutsu", a URL path, and "what does $jutsu do" do not count.
+# Each line is read once, so a long prompt costs linear time.
+classify_prompt() {
+  printf '%s' "$input" | awk '
+    { buf = buf $0 "\n" }
+    END {
+      if (!match(buf, /"prompt"[ \t\r\n]*:[ \t\r\n]*"/)) exit
+      t = substr(buf, RSTART + RLENGTH)
+      gsub(/\\\\/, "\001", t)
+      gsub(/\\"/, "\002", t)
+      end = index(t, "\"")
+      if (end == 0) exit
+      t = substr(t, 1, end - 1)
+      gsub(/\\u0024/, "$", t)
+      gsub(/\\u002[fF]/, "/", t)
+      gsub(/\\u0060/, "`", t)
+      gsub(/\\u005[bB]/, "[", t)
+      gsub(/\\u005[dD]/, "]", t)
+      gsub(/\\u0028/, "(", t)
+      gsub(/\\u0029/, ")", t)
+      gsub(/\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]/, " ", t)
+      gsub(/\\n/, "\n", t)
+      gsub(/\\[trbf]/, " ", t)
+      gsub(/\\\//, "/", t)
+      gsub(/\002/, "\"", t)
+      n = split(t, lines, "\n")
+      fence = 0; on = 0; all = ""
+      for (i = 1; i <= n; i++) {
+        s = lines[i]
+        if (s ~ /^[ \t]*(```|~~~)/) { fence = !fence; continue }
+        if (fence) continue
+        gsub(/`[^`]*`/, " ", s)
+        s = tolower(s)
+        gsub(/[ \t]+/, " ", s)
+        sub(/^ /, "", s); sub(/ $/, "", s)
+        if (s == "") continue
+        # Only a short prompt can be an off command, so keep at most 64 chars of it.
+        if (length(all) < 64) all = all " " s
+        if (s ~ /^[\/$]jutsu(:poteto-mode)?[.,!?;]*( |$)/ ||
+            s ~ /\[[\/$]jutsu(:poteto-mode)?\]\(skill:\/\// ||
+            s ~ /skill:\/\/[^ )]*\/jutsu(\/skills\/poteto-mode)?\/skill\.md([ )]|$)/ ||
+            s ~ /skill:\/\/jutsu(:poteto-mode)?([ )]|$)/) on = 1
+      }
+      sub(/^ /, "", all)
+      if (all ~ /^[\/$]jutsu(:poteto-mode)? off[.!]?$/) { print "off"; exit }
+      if (on) print "on"
+    }' 2>/dev/null
 }
 
 session=$(field session_id)
@@ -40,6 +99,12 @@ recover() {
   mkdir -p "$state_dir" 2>/dev/null && printf 'on\n' > "$state" 2>/dev/null
 }
 
+turn_on() {
+  mkdir -p "$state_dir" 2>/dev/null && printf 'on\n' > "$state" 2>/dev/null || return 1
+  find "$state_dir" -type f -mtime +30 -exec rm -f {} + 2>/dev/null
+  return 0
+}
+
 case "$event" in
   expand)
     [ -z "$(field agent_id)" ] || exit 0
@@ -49,15 +114,29 @@ case "$event" in
       *) exit 0 ;;
     esac
     args=$(field command_args | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-    mkdir -p "$state_dir" 2>/dev/null || exit 0
     if [ "$args" = "off" ]; then
       rm -f "$state" 2>/dev/null
     else
-      printf 'on\n' > "$state" 2>/dev/null
-      find "$state_dir" -type f -mtime +30 -exec rm -f {} + 2>/dev/null
+      turn_on
     fi
     ;;
   prompt)
+    # awk's gsub slows down fast on huge prompts (1 MB took 8 s on macOS), so a prompt
+    # over 256 KB is not read for a mention. The hook timeout is 10 s.
+    if [ -z "$(field agent_id)" ] && [ "${#input}" -le 262144 ]; then
+      case "$(classify_prompt)" in
+        off)
+          rm -f "$state" 2>/dev/null
+          exit 0
+          ;;
+        on)
+          if turn_on; then
+            printf '%s\n' "jutsu poteto mode is now on in this session. Unless the router is already loaded this turn, read $router in full and apply it to this request."
+            exit 0
+          fi
+          ;;
+      esac
+    fi
     [ -f "$state" ] || exit 0
     printf '%s\n' "jutsu poteto mode is on in this session. New task? Playbook match or rigor needed -> apply poteto mode (router: $router). Casual turn or user opts out -> don't."
     ;;
@@ -76,6 +155,14 @@ case "$event" in
         printf '%s\n' "jutsu poteto mode is on in this session (router: $router)."
         ;;
     esac
+    ;;
+  subagent)
+    # SubagentStart carries the parent's session_id, so the parent's state file decides.
+    [ "$(field agent_type)" = "jutsu:poteto-agent" ] || exit 0
+    [ -f "$state" ] || exit 0
+    path=$(printf '%s' "$router" | tr -d '\000-\037' | sed 's/\\/\\\\/g; s/"/\\"/g')
+    printf '{"hookSpecificOutput":{"hookEventName":"SubagentStart","additionalContext":"%s"}}\n' \
+      "jutsu poteto mode is on in the parent session. The poteto-mode router is $path. Read it in full before any work."
     ;;
 esac
 exit 0

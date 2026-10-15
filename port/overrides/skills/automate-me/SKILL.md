@@ -26,9 +26,9 @@ Update mode changes the rest of the flow:
 
 ### 1. Mine their history
 
-Locate the active workspace's transcripts before fanning out. They live in `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<dir>/`, where `<dir>` is the workspace path encoded as the runtime describes ([the runtime's History]({{plugin}}/skills/poteto-mode/references/runtime.md#history)). Use only that path. Don't glob across `projects/*/`. That crosses workspace boundaries and reads private chats from unrelated projects. In T3, `t3_thread_list` and `t3_thread_read` read the same project's threads. Skip records with `isMeta` set and local-command records.
+Locate this repo's transcripts before fanning out, in every worktree of the repo, per the corpus rules in the **recall** skill (`{{plugin}}/skills/recall/SKILL.md`) and [the runtime's History]({{plugin}}/skills/poteto-mode/references/runtime.md#history). `git worktree list --porcelain` gives the worktree paths. In T3, `t3_thread_list` plus each thread's `worktreePath` from `t3_thread_read` add the worktrees T3 already removed. Read only those dirs.
 
-Survey recent agent conversations within that scope for recurring patterns. Run multiple parallel subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Each slice mining subagent reads transcripts from the workspace-scoped path the parent provides, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
+Survey recent agent conversations within that scope for recurring patterns. Run multiple parallel subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Pick each subagent's `effort` for the job, per the Subagents section of the **poteto-mode** skill (`{{plugin}}/skills/poteto-mode/SKILL.md`) and [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles). Each slice mining subagent reads transcripts from the dirs the parent lists, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
 
 - Response preferences (length, tone, format, "dumb it down" corrections)
 - Delegation habits (subagents, models, specialized workflows, parallelism)
@@ -80,7 +80,7 @@ Show the draft to the user and take feedback. Expect multiple iterations. Cut ru
 
 ### 6. Land it
 
-Work in a worktree off main. Commit and open a PR. Don't push to main directly.
+For a project skill, work in a worktree off main, commit, and open a PR. Don't push to main directly. A personal skill in the Claude config dir is not in a repo, so write the file, tell the user its path, and stop. It gets no commit and no PR.
 
 ## Guardrails
 
