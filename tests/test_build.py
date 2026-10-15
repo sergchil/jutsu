@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import filecmp
 import json
+import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -68,6 +72,20 @@ class BuildTest(unittest.TestCase):
                                             "---\nname: Comment Sicko\ndescription: d\nis_background: true\n---\n", spec)
         self.assertEqual(agent, "---\nname: comment-sicko\ndescription: d\n---\n")
 
+    def test_model_invocable_skills_keep_auto_invocation(self):
+        spec = build.load_json(build.SPEC)
+        self.assertEqual(sorted(spec["frontmatter"]["model_invocable"]),
+                         ["benchmark-checklist", "tdd", "typescript-best-practices"])
+        src = "---\nname: tdd\ndescription: Use when asked for TDD.\ndisable-model-invocation: true\n---\nbody\n"
+        out = build.transform_frontmatter("skills/tdd/SKILL.md", src, spec)
+        self.assertEqual(out, "---\nname: tdd\ndescription: Use when asked for TDD.\n---\nbody\n")
+
+    def test_substitutions_come_only_from_port_subs(self):
+        self.assertFalse((ROOT / "port" / "substitutions.json").exists())
+        ids = [s["id"] for s in build.load_substitutions()]
+        self.assertTrue(ids)
+        self.assertEqual(len(ids), len(set(ids)))
+
 
 class CheckerTest(unittest.TestCase):
     def test_flags_each_class_of_problem(self):
@@ -92,23 +110,14 @@ class CheckerTest(unittest.TestCase):
             for marker in ("'<<<<<<<'", "'======='", "'>>>>>>>'"):
                 self.assertIn(f"unresolved merge conflict marker {marker}", text)
 
-    def test_allowances_are_per_line(self):
+    def test_the_runtime_is_checked_like_any_other_file(self):
         with tempfile.TemporaryDirectory() as tmp:
-            plugin = build_to(tmp)
+            plugin = mini_plugin(tmp)
             runtime = plugin / check.RUNTIME
-            runtime.write_text(runtime.read_text() + "\nUse the `AskQuestion` tool.\n")
+            runtime.write_text("| `AskQuestion` | `AskUserQuestion` |\n| cloud agent | a worktree |\n")
             text = "\n".join(check.check(plugin))
-            self.assertIn(f"{check.RUNTIME}:", text)
-            self.assertIn("'AskQuestion'", text)
-
-    def test_an_allowance_that_excuses_nothing_fails(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            plugin = build_to(tmp)
-            runtime = plugin / check.RUNTIME
-            lines = [l for l in runtime.read_text().splitlines(True) if "| `AskQuestion` |" not in l]
-            runtime.write_text("".join(lines))
-            text = "\n".join(check.check(plugin))
-            self.assertIn("on the line with '| `AskQuestion` |' excuses nothing", text)
+            self.assertIn(f"{check.RUNTIME}:1: Cursor-only, unresolved, or unsafe text: 'AskQuestion'", text)
+            self.assertIn(f"{check.RUNTIME}:2: Cursor-only, unresolved, or unsafe text: 'cloud agent'", text)
 
     def test_worktree_handoff_is_named_only_in_the_runtime(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -121,6 +130,100 @@ class CheckerTest(unittest.TestCase):
             self.assertIn("skills/how/SKILL.md", text)
             self.assertIn("'t3_worktree_handoff'", text)
             self.assertNotIn(f"{check.RUNTIME}:", text)
+
+
+def mini_plugin(tmp: str) -> Path:
+    """The smallest plugin tree check.check accepts, so a test sees only its own problem."""
+    plugin = Path(tmp) / "mini"
+    files = {
+        ".claude-plugin/plugin.json": json.dumps({"name": "jutsu", "agents": []}),
+        "SKILL.md": "---\nname: jutsu\ndescription: Turn on poteto mode.\ndisable-model-invocation: true\n---\n",
+        "skills/how/SKILL.md": "---\nname: how\ndescription: Explain how code works.\n"
+                               "disable-model-invocation: true\n---\nbody\n",
+        "skills/poteto-mode/SKILL.md": "---\nname: poteto-mode\ndescription: The router.\n"
+                                       "disable-model-invocation: true\n---\n",
+        check.RUNTIME: "# runtime\n",
+        "hooks/hooks.json": json.dumps({"hooks": {}}),
+        "hooks/jutsu-mode": "#!/bin/sh\nexit 0\n",
+    }
+    for rel, text in files.items():
+        (plugin / rel).parent.mkdir(parents=True, exist_ok=True)
+        (plugin / rel).write_text(text)
+    (plugin / "hooks/jutsu-mode").chmod(0o755)
+    return plugin
+
+
+def skill(plugin: Path, name: str, description: str, user_only: bool) -> None:
+    flag = "disable-model-invocation: true\n" if user_only else ""
+    path = plugin / "skills" / name / "SKILL.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"---\nname: {name}\ndescription: {description}\n{flag}---\nbody\n")
+
+
+class SkillTextTest(unittest.TestCase):
+    """Text Claude Code shows people, and which skills Claude may invoke on its own."""
+
+    def problems(self, plugin: Path, invocable=()) -> str:
+        with mock.patch.object(check, "model_invocable", return_value=set(invocable)):
+            return "\n".join(check.check(plugin))
+
+    def test_the_mini_plugin_is_clean(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(self.problems(mini_plugin(tmp)), "")
+
+    def test_a_slash_only_description_must_not_read_as_a_routing_rule(self):
+        # cursor/plugins#367: "Use when the user says reflect" in the / menu reads as if
+        # the skill fires on its own.
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = mini_plugin(tmp)
+            skill(plugin, "reflect", "Use when the user says reflect.", user_only=True)
+            self.assertIn("skills/reflect/SKILL.md: a slash-only description must not read as a routing rule",
+                          self.problems(plugin))
+
+    def test_a_model_invocable_skill_may_route_and_must_not_be_user_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = mini_plugin(tmp)
+            skill(plugin, "tdd", "Use when asked for TDD.", user_only=False)
+            self.assertEqual(self.problems(plugin, {"tdd"}), "")
+            skill(plugin, "tdd", "Run TDD.", user_only=True)
+            self.assertIn("skills/tdd/SKILL.md: port/spec.json lists it as model_invocable",
+                          self.problems(plugin, {"tdd"}))
+            skill(plugin, "tdd", "Run TDD.", user_only=False)
+            self.assertIn("skills/tdd/SKILL.md: jutsu skills are user-invoked", self.problems(plugin))
+
+    def test_spec_names_the_invocable_skills(self):
+        self.assertEqual(check.model_invocable(), {"benchmark-checklist", "tdd", "typescript-best-practices"})
+
+    def test_cursor_visualize_command_is_flagged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = mini_plugin(tmp)
+            how = plugin / "skills/how/SKILL.md"
+            how.write_text(how.read_text() + "Build the chart with `/visualize`.\n")
+            self.assertIn("'/visualize'", self.problems(plugin))
+
+
+class T3ToolNameTest(unittest.TestCase):
+    """T3 tool names come from tools/t3-tools.txt, not from a pattern kept in check.py."""
+
+    def test_header_lines_are_not_tool_names(self):
+        self.assertFalse(any(n.startswith("#") or " " in n for n in check.T3_TOOLS))
+        self.assertIn("write_pull_request_guides", check.T3_TOOLS)
+
+    def test_typos_of_listed_tools_are_flagged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = mini_plugin(tmp)
+            how = plugin / "skills/how/SKILL.md"
+            how.write_text(how.read_text() + "Call `write_pull_request_guide`, then `read_pull_request_guide`, "
+                           "`t3_thread_create`, and `run_scheduled_tasks_now`. Keep `run_in_background`.\n")
+            text = "\n".join(check.check(plugin))
+            for bad in ("write_pull_request_guide", "t3_thread_create", "run_scheduled_tasks_now"):
+                self.assertIn(f"not a T3 tool: {bad}\n", text + "\n")
+            self.assertNotIn("not a T3 tool: read_pull_request_guide\n", text + "\n")
+            self.assertNotIn("run_in_background", text)
+
+    def test_every_listed_tool_passes(self):
+        self.assertFalse([t for t in check.T3_TOOLS if check.unknown_t3_tool(t)])
+        self.assertEqual(check.self_test_other(), [])
 
 
 class DenyRulesTest(unittest.TestCase):
@@ -273,6 +376,53 @@ class PortRulesTest(unittest.TestCase):
         self.assertIn('"baseRef":"<commit SHA>"', runtime)
         self.assertIn("Workspace preparation failed", runtime)
         self.assertNotIn('"baseRef":"<parent branch>"', runtime)
+
+
+class StoreTest(unittest.TestCase):
+    """The runtime's Store snippet must put .jutsu/ in the main checkout, even when run
+    from a linked worktree, because T3's cleanup deletes worktrees whose only local files
+    are git-ignored (apps/server/src/storageCleanup.ts:330-366)."""
+
+    def snippet(self) -> str:
+        runtime = (ROOT / "port/added/skills/poteto-mode/references/runtime.md").read_text()
+        store = runtime.split("## Store", 1)[1].split("\n## ", 1)[0]
+        m = re.search(r"```sh\n(.*?)```", store, re.S)
+        self.assertIsNotNone(m, "the Store section has no sh block")
+        return m.group(1)
+
+    def git(self, *args, cwd):
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=cwd, check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    def test_store_lives_in_the_main_checkout_from_a_linked_worktree(self):
+        shells = [s for s in ("sh", "zsh", "bash") if shutil.which(s)]
+        with tempfile.TemporaryDirectory() as tmp:
+            main = Path(tmp).resolve() / "repo"
+            main.mkdir()
+            self.git("init", "-q", cwd=main)
+            (main / "README.md").write_text("x\n")
+            self.git("add", "-A", cwd=main)
+            self.git("commit", "-qm", "init", cwd=main)
+            wt = Path(tmp).resolve() / "t3-worktrees" / "repo" / "t3-abc"
+            self.git("worktree", "add", "-q", "-b", "t3/abc", str(wt), cwd=main)
+            # The old rule ("at the repo root") resolves to the worktree, which T3 may delete.
+            self.assertEqual(self.git("rev-parse", "--show-toplevel", cwd=wt), str(wt))
+            for shell in shells:
+                for where in (wt, main, wt):  # twice from the worktree: the exclude lines stay single
+                    with self.subTest(shell=shell, where=where.name):
+                        r = subprocess.run([shell, "-c", self.snippet()], cwd=where, capture_output=True, text=True,
+                                           env=dict(os.environ, GIT_CONFIG_NOSYSTEM="1"))
+                        self.assertEqual(r.returncode, 0, r.stderr)
+                        self.assertEqual(r.stdout.strip(), str(main / ".jutsu"))
+            exclude = (main / ".git" / "info" / "exclude").read_text().splitlines()
+            self.assertEqual([l for l in exclude if not l.startswith("#")], [".jutsu/", ".audit/"])
+            (main / ".jutsu" / "plan").mkdir(parents=True)
+            (main / ".jutsu" / "plan" / "resume.md").write_text("note\n")
+            (main / ".audit").mkdir()
+            (main / ".audit" / "plan.todo.md").write_text("- [ ] x\n")
+            (wt / ".jutsu").mkdir()
+            self.assertEqual(self.git("status", "--porcelain", cwd=main), "")
+            self.assertEqual(self.git("status", "--porcelain", cwd=wt), "")
 
 
 class DocsTest(unittest.TestCase):

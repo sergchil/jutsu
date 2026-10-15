@@ -169,8 +169,9 @@ class ModeHookTest(unittest.TestCase):
         r = self.start("fork", Path(self.tmp.name) / "nope.jsonl")
         self.assertEqual((r.returncode, r.stdout), (0, ""))
 
-    # T3 expands only the last $skill mention into a slash command, and older T3 builds
-    # send $jutsu as plain text, so UserPromptSubmit also reads the prompt itself.
+    # T3 expands only the last $skill mention into a slash command, so UserPromptSubmit
+    # also reads the prompt itself. A mention counts only where a command would start:
+    # at the start of the prompt or of a line, or as a skill:// link.
     ACTIVATED = ("jutsu poteto mode is now on in this session. Unless the router is already loaded "
                  "this turn, read /opt/jutsu/skills/poteto-mode/SKILL.md in full and apply it to this request.")
 
@@ -187,17 +188,16 @@ class ModeHookTest(unittest.TestCase):
         for text in [
             "$jutsu fix the login bug",
             "/jutsu fix the login bug",
-            "fix the login bug with $jutsu",
-            "please use $jutsu.",
+            "$jutsu.",
             "$JUTSU go",
             "$jutsu:poteto-mode go",
             "/jutsu fix X with\n/jutsu:how",
-            "fix X with /jutsu and explain with /jutsu:how",
+            "fix the bug in auth.ts\n/jutsu",
             "[$jutsu](skill:///Users/me/.claude/skills/jutsu/SKILL.md) fix it",
             "[/jutsu](skill://jutsu) fix it",
             "use this (skill:///Users/me/.claude/skills/jutsu/SKILL.md) to fix it",
             "first line\n\t$jutsu\nlast line",
-            'fix the "login" bug \\ with $jutsu',
+            'fix the "login" bug \\ with\n$jutsu',
         ]:
             with self.subTest(text=text):
                 self.reset()
@@ -225,6 +225,23 @@ class ModeHookTest(unittest.TestCase):
             "read skill:///x/jutsu/skills/how/SKILL.md",
             "/jutsu off",
             "$jutsu off",
+        ]:
+            with self.subTest(text=text):
+                self.reset()
+                r = self.submit(text)
+                self.assertEqual((r.returncode, r.stdout), (0, ""))
+                self.assertEqual(self.state_files(), [])
+
+    def test_mentions_inside_a_sentence_do_not_turn_mode_on(self):
+        # Talking about jutsu is not running it. Only a line that starts with the
+        # command, or a skill:// link, turns the mode on.
+        for text in [
+            "what does $jutsu do compared to pstack?",
+            "Should I uninstall /jutsu? it feels slow",
+            "fix the login bug with $jutsu",
+            "please use $jutsu.",
+            "fix X with /jutsu and explain with /jutsu:how",
+            'fix the "login" bug \\ with $jutsu',
         ]:
             with self.subTest(text=text):
                 self.reset()

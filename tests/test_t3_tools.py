@@ -19,6 +19,8 @@ import t3_tools  # noqa: E402
 from t3_tools import ExtractError, extract, strip_comments  # noqa: E402
 
 TK = "apps/server/src/mcp/toolkits"
+ORCH = "packages/provider-core/src/server/orchestrationInstructions.ts"
+ORCH_TEXT = 'export const T3 = `\n## T3 Code orchestration\n- Use delegate_task.\n`;\n'
 
 LITERALS = '''
 import { Tool, Toolkit } from "effect/ai";
@@ -124,7 +126,7 @@ class MainTest(unittest.TestCase):
         src = self.tmp / "t3code"
         for rel, text in {**tk("device", LITERALS), **tk("html", CONSTANT_IMPORTED),
                           f"{TK}/device/tools.test.ts": 'Tool.make("test_only", {});',
-                          "packages/shared/src/htmlRender.ts": SHARED}.items():
+                          "packages/shared/src/htmlRender.ts": SHARED, ORCH: ORCH_TEXT}.items():
             (src / rel).parent.mkdir(parents=True, exist_ok=True)
             (src / rel).write_text(text)
         git("init", "-q", cwd=src)
@@ -136,12 +138,14 @@ class MainTest(unittest.TestCase):
         self.pin = self.tmp / "t3.json"
         self.pin.write_text(json.dumps({
             "repo": "fixture/t3code", "repository": str(src), "commit": "0" * 40, "date": "2026-01-01",
-            "toolkits": TK, "paths": [TK, "packages/shared/src"]}))
+            "toolkits": TK, "paths": [TK, "packages/shared/src"], "instructions": [ORCH]}))
         self.list = self.tmp / "t3-tools.txt"
         self.list.write_text("device_list\ndevice_open\ngone_tool\n")
+        self.instructions = self.tmp / "t3-instructions.txt"
         (self.tmp / "plugin").mkdir()
         (self.tmp / "plugin" / "SKILL.md").write_text("Call `gone_tool` first.\n")
         for patch in (mock.patch.object(t3_tools, "PIN", self.pin), mock.patch.object(t3_tools, "LIST", self.list),
+                      mock.patch.object(t3_tools, "INSTRUCTIONS", self.instructions),
                       mock.patch.object(t3_tools, "ROOT", self.tmp)):
             patch.start()
             self.addCleanup(patch.stop)
@@ -159,7 +163,43 @@ class MainTest(unittest.TestCase):
         self.assertIn("added: html_render", out)
         self.assertIn("removed: gone_tool (mentioned in plugin/SKILL.md)", out)
         self.assertIn("+preview_open", out)
+        self.assertIn("+- Use delegate_task.", out)
+        self.assertTrue(out.rstrip().endswith("changed: yes"))
         self.assertEqual(self.list.read_text(), before)
+        self.assertFalse(self.instructions.exists())
+
+    def change(self, rel: str, text: str) -> None:
+        (self.src / rel).write_text(text)
+        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "change", cwd=self.src)
+
+    def test_an_instruction_change_alone_is_a_change(self):
+        # T3 added delegate_task isolation and a prompt rule on 2026-10-14 without
+        # renaming a tool. The names-only report said "no tool names changed".
+        self.assertEqual(self.run_main()[0], 0)
+        code, out = self.run_main("--dry-run")
+        self.assertTrue(out.rstrip().endswith("changed: no"), out)
+        self.change(ORCH, ORCH_TEXT.replace("Use delegate_task.", 'Use delegate_task with isolation:"worktree".'))
+        code, out = self.run_main("--dry-run")
+        self.assertEqual(code, 0, out)
+        self.assertIn("no tool names changed", out)
+        self.assertIn('+- Use delegate_task with isolation:"worktree".', out)
+        self.assertTrue(out.rstrip().endswith("changed: yes"), out)
+        self.assertEqual(self.run_main("--check")[0], 1)
+
+    def test_a_moved_instruction_file_fails_loudly(self):
+        git("rm", "-q", ORCH, cwd=self.src)
+        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "move", cwd=self.src)
+        code, out = self.run_main("--dry-run")
+        self.assertEqual(code, 2)
+        self.assertIn(f"{ORCH} is missing", out)
+
+    def test_clone_checks_out_the_instruction_files(self):
+        pin = json.loads(self.pin.read_text())
+        dest = self.tmp / "clone"
+        commit, _ = t3_tools.clone(pin, self.commit, dest)
+        self.assertEqual(commit, self.commit)
+        self.assertEqual((dest / ORCH).read_text(), ORCH_TEXT)
+        self.assertTrue((dest / TK / "device" / "tools.ts").is_file())
 
     def test_write_then_check(self):
         code, out = self.run_main()
@@ -169,6 +209,8 @@ class MainTest(unittest.TestCase):
         self.assertIn(f"# fixture/t3code {self.commit} (", text)
         self.assertEqual(t3_tools.names_in(text), ["device_list", "device_open", "html_render", "preview_open"])
         self.assertEqual(json.loads(self.pin.read_text())["commit"], self.commit)
+        snapshot = self.instructions.read_text()
+        self.assertIn(f"===== {ORCH} =====\n{ORCH_TEXT}", snapshot)
         self.assertEqual(self.run_main("--check")[0], 0)
 
         self.list.write_text(text.replace("html_render\n", ""))
@@ -188,6 +230,12 @@ class MainTest(unittest.TestCase):
         text = (ROOT / "tools" / "t3-tools.txt").read_text()
         pin = json.loads((ROOT / "port" / "t3.json").read_text())
         self.assertIn(pin["commit"], text.splitlines()[1])
+        snapshot = (ROOT / "tools" / "t3-instructions.txt").read_text()
+        self.assertIn(pin["commit"], snapshot.splitlines()[1])
+        for rel in pin["instructions"]:
+            self.assertIn(f"===== {rel} =====\n", snapshot)
+        # The build T3 users run (nightly 20261014.3105) is the pin.
+        self.assertTrue(pin["commit"].startswith("3417bc385"))
         names = t3_tools.names_in(text)
         self.assertEqual(names, sorted(set(names)))
         self.assertIn(f"# {len(names)} tools", text)

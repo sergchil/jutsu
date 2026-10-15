@@ -32,20 +32,22 @@ export function ensureDependenciesInstalled(): void {
     return;
   }
 
+  // Runtime needs only commander. --production skips the dev dependencies
+  // (typescript, bun-types) that only the tests and the type check use.
   const result = Bun.spawnSync(
-    [process.execPath, "install", "--frozen-lockfile"],
+    [process.execPath, "install", "--frozen-lockfile", "--production"],
     { cwd: scriptsDirectory }
   );
   if (result.exitCode !== 0) {
     process.stdout.write(result.stdout);
     process.stderr.write(result.stderr);
     throw new Error(
-      `bun install --frozen-lockfile exited with status ${result.exitCode}`
+      `bun install --frozen-lockfile --production exited with status ${result.exitCode}`
     );
   }
   if (!existsSync(commanderPackagePath)) {
     throw new Error(
-      "bun install --frozen-lockfile completed without installing commander"
+      "bun install --frozen-lockfile --production completed without installing commander"
     );
   }
 

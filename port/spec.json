@@ -14,6 +14,6 @@
   "rename": {},
   "frontmatter": {
     "drop": ["mode", "icon", "color", "reminder", "disable-model-invocation", "is_background"],
-    "model_invocable": []
+    "model_invocable": ["benchmark-checklist", "tdd", "typescript-best-practices"]
   }
 }

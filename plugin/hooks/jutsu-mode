@@ -4,15 +4,16 @@
 # compaction or resume.
 #
 #   jutsu-mode expand    UserPromptExpansion: /jutsu or /jutsu:poteto-mode turns the mode on, "off" turns it off
-#   jutsu-mode prompt    UserPromptSubmit: a /jutsu or $jutsu token, or a skill:// link to jutsu, in the
-#                     prompt text turns the mode on; a prompt that is only "/jutsu off" or "$jutsu off"
-#                     turns it off. Then a one-line reminder while the mode is on.
+#   jutsu-mode prompt    UserPromptSubmit: a /jutsu or $jutsu token that starts the prompt or a line, or
+#                     a skill:// link to jutsu, turns the mode on; a mention inside a sentence does not.
+#                     A prompt that is only "/jutsu off" or "$jutsu off" turns it off. Then a one-line
+#                     reminder while the mode is on.
 #   jutsu-mode start     SessionStart: after compact, reread the router; after resume or fork, a one-line
 #                     reminder. A fork has a new session id, so the state is restored from its history.
 #   jutsu-mode subagent  SubagentStart: a jutsu:poteto-agent child of a session in the mode gets the router path.
 #
-# The prompt path exists because T3 expands only the last $skill mention into a slash command
-# and older T3 builds send $jutsu as plain text, so UserPromptExpansion never sees /jutsu.
+# The prompt path exists because T3 expands only the last $skill mention into a slash command,
+# so UserPromptExpansion never sees an earlier one.
 #
 # It never blocks: every path exits 0, and it prints nothing it cannot stand behind.
 # State is one file per session under ${CLAUDE_PLUGIN_DATA}/sessions.
@@ -26,8 +27,9 @@ field() {
 
 # Prints "on", "off", or nothing for the prompt text of a UserPromptSubmit payload.
 # It decodes the JSON string, drops fenced code blocks and inline code spans, then looks
-# for /jutsu or $jutsu as a whole token (start of text or after whitespace), or a skill://
-# link to jutsu. "/jutsu:how", "foo/jutsu", and a URL path do not count.
+# for /jutsu or $jutsu as a whole token at the start of a line, or a skill:// link to
+# jutsu. "/jutsu:how", "foo/jutsu", a URL path, and "what does $jutsu do" do not count.
+# Each line is read once, so a long prompt costs linear time.
 classify_prompt() {
   printf '%s' "$input" | awk '
     { buf = buf $0 "\n" }
@@ -52,21 +54,26 @@ classify_prompt() {
       gsub(/\\\//, "/", t)
       gsub(/\002/, "\"", t)
       n = split(t, lines, "\n")
-      text = ""; fence = 0
+      fence = 0; on = 0; all = ""
       for (i = 1; i <= n; i++) {
-        if (lines[i] ~ /^[ \t]*(```|~~~)/) { fence = !fence; continue }
-        if (!fence) text = text lines[i] "\n"
+        s = lines[i]
+        if (s ~ /^[ \t]*(```|~~~)/) { fence = !fence; continue }
+        if (fence) continue
+        gsub(/`[^`]*`/, " ", s)
+        s = tolower(s)
+        gsub(/[ \t]+/, " ", s)
+        sub(/^ /, "", s); sub(/ $/, "", s)
+        if (s == "") continue
+        # Only a short prompt can be an off command, so keep at most 64 chars of it.
+        if (length(all) < 64) all = all " " s
+        if (s ~ /^[\/$]jutsu(:poteto-mode)?[.,!?;]*( |$)/ ||
+            s ~ /\[[\/$]jutsu(:poteto-mode)?\]\(skill:\/\// ||
+            s ~ /skill:\/\/[^ )]*\/jutsu(\/skills\/poteto-mode)?\/skill\.md([ )]|$)/ ||
+            s ~ /skill:\/\/jutsu(:poteto-mode)?([ )]|$)/) on = 1
       }
-      gsub(/`[^`]*`/, " ", text)
-      s = tolower(text)
-      gsub(/[ \t\n]+/, " ", s)
-      sub(/^ /, "", s); sub(/ $/, "", s)
-      if (s ~ /^[\/$]jutsu(:poteto-mode)? off[.!]?$/) { print "off"; exit }
-      p = " " s " "
-      if (p ~ / [\/$]jutsu(:poteto-mode)?[.,!?;]* / ||
-          s ~ /\[[\/$]jutsu(:poteto-mode)?\]\(skill:\/\// ||
-          s ~ /skill:\/\/[^ )]*\/jutsu(\/skills\/poteto-mode)?\/skill\.md([ )]|$)/ ||
-          s ~ /skill:\/\/jutsu(:poteto-mode)?([ )]|$)/) print "on"
+      sub(/^ /, "", all)
+      if (all ~ /^[\/$]jutsu(:poteto-mode)? off[.!]?$/) { print "off"; exit }
+      if (on) print "on"
     }' 2>/dev/null
 }
 

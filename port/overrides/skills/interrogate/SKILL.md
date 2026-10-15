@@ -28,11 +28,11 @@ Launch all reviewers in a single message with the `Agent` tool, one per entry on
 
 Each reviewer gets `subagent_type: general-purpose`, a read-only brief, which the reviewer prompt carries, and `model` and `effort` set from its configured entry, or its default when there is no configured line. Omit `model` for an `inherit` entry, so that reviewer runs on the parent model. `effort` is never below `high`. Pass `high` for an entry that names a lower effort or none, `inherit` included.
 
-If the `Agent` tool rejects a configured entry, run that reviewer on a default and say so. Do not block the review on it. An entry that names a T3 target runs that reviewer through `delegate_task` per [the runtime's Subagents]({{plugin}}/skills/poteto-mode/references/runtime.md#subagents). Pass `options` with `effort` on every call and a distinct `clientRequestId` per reviewer and per round, and read each result with `task_status` after the wake.
+An entry that names a T3 target runs through `delegate_task` per [the runtime's Subagents]({{plugin}}/skills/poteto-mode/references/runtime.md#subagents). If a T3 entry cannot run (outside T3, or its provider is off in T3's settings), run that reviewer on its line's Claude default and say the panel lost its cross-family seat.
 
 Record the provider, model, and effort each reviewer actually ran at, not the ones you asked for. A `delegate_task` reviewer's `task_status` names its provider and model, and `t3_thread_configuration` on its `childThreadId` names its effort. An `Agent` reviewer runs at the `model` and `effort` you passed, unless its model does not offer that effort and falls back to its default.
 
-Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`. Pick each subagent's reasoning level and fast or standard speed for the job, per the Subagents section of the **poteto-mode** skill (`{{plugin}}/skills/poteto-mode/SKILL.md`) and [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles).
+Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`.
 
 ## Step 4, Synthesize
 

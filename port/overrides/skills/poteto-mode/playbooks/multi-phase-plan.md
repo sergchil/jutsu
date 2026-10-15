@@ -3,16 +3,16 @@
 **You own the plan, not the code. The plan is a checklist an owner runs box by box and the operator audits from the evidence.** The plan is the deliverable. Do not implement.
 
 1. When the change is one or two files with an obvious approach, skip the plan. Say so and stop.
-2. Settle open questions by prototype before you write. Run `playbooks/prototype.md` for each. Keep the branch, the SHA, and the screenshots for Appendix A. Ask the operator only about a product or preference call that no run can settle. Give options (the **never-block-on-the-human** principle, `{{plugin}}/principles/principle-never-block-on-the-human.md`).
-3. Explore in subagents with `subagent_type: "jutsu:poteto-agent"` and an explicit model per the Subagents section (the **guard-the-context-window** principle, `{{plugin}}/principles/principle-guard-the-context-window.md`). Pick each subagent's reasoning level (`effort`) and fast or standard speed for the job, per the Subagents section and [the runtime's Roles](../references/runtime.md#roles). Each returns file pointers, conventions, test commands, and entry points. No inlined dumps.
-4. Copy the skeleton below into the plan file and fill every placeholder. Unless the operator names a path, write the file under `.jutsu/<slug>/docs/`, per [the runtime's Store](../references/runtime.md#store). In the skeleton, `<jutsu>` is the absolute path of the installed jutsu plugin, two directories above poteto-mode's SKILL.md. Keep every heading and every sub-block in the order shown. One section per PR. One PR is one change with its own evidence (the **sequence-verifiable-units** principle, `{{plugin}}/principles/principle-sequence-verifiable-units.md`). Name the execution playbook in **How to read this**. Pick between `playbooks/autopilot-full.md` and `playbooks/autopilot-stack.md` per the rule at the end of `playbooks/autopilot-stack.md`. A standing program takes `playbooks/orchestrate.md`.
+2. Settle open questions by prototype before you write. Run `playbooks/prototype.md` for each. Keep the branch, the SHA, and the evidence for Appendix A. Ask the operator only about a product or preference call that no run can settle. Give options (the **never-block-on-the-human** principle, `{{plugin}}/principles/principle-never-block-on-the-human.md`).
+3. Explore in subagents with `subagent_type: "jutsu:poteto-agent"` and an explicit model per the Subagents section (the **guard-the-context-window** principle, `{{plugin}}/principles/principle-guard-the-context-window.md`). Pick each subagent's effort for the job, per the Subagents section and [the runtime's Roles](../references/runtime.md#roles). Each returns file pointers, conventions, test commands, and entry points. No inlined dumps.
+4. Copy the skeleton below into the plan file and fill every placeholder. In plan mode you cannot write the file or run the check script. Ask the operator to leave plan mode, or send the plan through `ExitPlanMode` and write the file once it is approved. Unless the operator names a path, write the file under `.jutsu/<slug>/docs/`, per [the runtime's Store](../references/runtime.md#store). In the skeleton, `<jutsu>` is the absolute path of the installed jutsu plugin, two directories above poteto-mode's SKILL.md. Keep every heading and every sub-block in the order shown. One section per PR. One PR is one change with its own evidence (the **sequence-verifiable-units** principle, `{{plugin}}/principles/principle-sequence-verifiable-units.md`). Name the execution playbook in **How to read this**. Pick between `playbooks/autopilot-full.md` and `playbooks/autopilot-stack.md` per the rule at the end of `playbooks/autopilot-stack.md`. A standing program takes `playbooks/orchestrate.md`.
 5. Write under `/jutsu:technical-writing` (`{{plugin}}/skills/technical-writing/SKILL.md`) in full, then `/jutsu:unslop` (`{{plugin}}/skills/unslop/SKILL.md`). The body is one Diátaxis mode, how-to. Appendices hold explanation and reference. Each heading states the task or the finding. No long dashes. No mid-sentence colons.
-6. Run `node <jutsu>/skills/poteto-mode/scripts/check-plan.mjs <plan.md>` and fix every line it prints (the **encode-lessons-in-structure** principle, `{{plugin}}/principles/principle-encode-lessons-in-structure.md`).
+6. Run `bun <jutsu>/skills/poteto-mode/scripts/check-plan.mjs <plan.md>` (`node` works too) and fix every line it prints, including each `<placeholder>` left unfilled (the **encode-lessons-in-structure** principle, `{{plugin}}/principles/principle-encode-lessons-in-structure.md`).
 7. Hand back. Post the plan path and the script's output, then stop. Execution starts on the operator's explicit go, under the execution playbook the plan names.
 
-**Verification.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked (the **prove-it-works** principle, `{{plugin}}/principles/principle-prove-it-works.md`). That sentence is the verification rule. Every verification block opens with it. The live block is mandatory. Ten lanes at the PR head drive the real surface through its control skill, per the **swarm** skill (`{{plugin}}/skills/swarm/SKILL.md`), on the `swarm workers` model (default `opus @high`, per [the runtime's Roles](../references/runtime.md#roles)). Each lane is one box with a concrete scenario, the screenshot it saves, and its pass predicate. One lane is the **Regression lane against trunk.** It runs the same load-bearing scenario on trunk and head. If trunk does not have the feature, the lane records that fact and gates the behavior the diff adds plus the end state the user waits for instead of inventing a trunk result. The perf gate is dual-sided. Trunk and head must both produce the named metric. If trunk lacks the feature, also isolate the work the diff adds and set an absolute budget for that work plus the end-to-end state the user waits for. Do not claim a ratio between unlike scenarios. The perf block names the metric, the interleaved probe, the trunk baseline measured first, and the rule with the number that fails. A PR that changes an interaction is review-gated. The operator reviews it in chat with screenshots and a video before merge. A PR that changes no interaction writes `**Review gate.** None. <PR id> is not review-gated.` and no boxes under it.
+**Verification.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked (the **prove-it-works** principle, `{{plugin}}/principles/principle-prove-it-works.md`). That sentence is the verification rule. Every verification block opens with it. The live block is mandatory. Ten lanes at the PR head drive the real surface through its control skill, per the **swarm** skill (`{{plugin}}/skills/swarm/SKILL.md`), on the `swarm workers` model from [the runtime's Roles](../references/runtime.md#roles). Each lane is one box with a concrete scenario, the evidence it saves, and its pass predicate. A lane that drives a UI saves a screenshot. Any other lane saves its captured output, such as terminal output or a response body. One lane is the **Regression lane against trunk.** It runs the same load-bearing scenario on trunk and head. If trunk does not have the feature, the lane records that fact and gates the behavior the diff adds plus the end state the user waits for instead of inventing a trunk result. The perf gate is dual-sided. Trunk and head must both produce the named metric. If trunk lacks the feature, also isolate the work the diff adds and set an absolute budget for that work plus the end-to-end state the user waits for. Do not claim a ratio between unlike scenarios. The perf block names the metric, the interleaved probe, the trunk baseline measured first, and the rule with the number that fails. A PR that changes an interaction is review-gated. The operator reviews it in chat with its evidence before merge. A UI change shows screenshots, and a web UI in T3 also gets a video. A CLI or TUI change shows the captured terminal transcript. A PR that changes no interaction writes `**Review gate.** None. <PR id> is not review-gated.` and no boxes under it.
 
-**Control skill.** Pick it by surface, per [the runtime's Proof surfaces](../references/runtime.md#proof-surfaces). Browser, Electron, and web UIs use T3's `preview_*` tools. CLIs and TUIs use the terminal, with `tmux` for a TUI. Native mobile uses T3's `device_*` tools or whatever simulator-driving skill the repo has. A PR that touches two surfaces gets lanes on both. A surface with no control skill is a risk in Appendix C, and its live block still names how each lane drives it.
+**Control skill.** Pick it by surface, per [the runtime's Proof surfaces](../references/runtime.md#proof-surfaces). Browser and web UIs use T3's `preview_*` tools, which open a browser tab at a URL or a port. They do not drive an Electron window. Electron needs a CDP or Playwright driver. CLIs and TUIs use the terminal, with `tmux` for a TUI. Native mobile uses T3's `device_*` tools or whatever simulator-driving skill the repo has. A PR that touches two surfaces gets lanes on both. A surface with no control skill is a risk in Appendix C, and its live block still names how each lane drives it.
 
 ````markdown
 # <Program> plan
@@ -51,7 +51,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
   - [ ] <PR id> and <PR id> are independent and first. Both branch from `main`.
   - [ ] <PR id> after <PR id>.
 - [ ] Hold the file boundaries. <PR id or class> touches only `<glob>`.
-- [ ] Hold the review gate. <PR ids> change an interaction. They wait for the operator's review in chat with screenshots and a video before merge.
+- [ ] Hold the review gate. <PR ids> change an interaction. They wait for the operator's review in chat with their evidence before merge.
 
 ### PR mechanics, for every PR
 
@@ -75,7 +75,8 @@ Each live lane runs in its own worktree at the PR head, per the Isolation sectio
 - [ ] `git fetch origin <head-branch> && git worktree add --detach <lane path> <head SHA>`. Work only there.
 - [ ] <Start the backend and the surface. Wait for ready.>
 - [ ] <Deliver input only through the control skill's commands. Name the read-only diagnostics.>
-- [ ] Save every screenshot to `/tmp/swarm-<pr-id>/worker-<n>/<slug>.png` and return the paths with the report.
+- [ ] Save every piece of evidence to `/tmp/swarm-<pr-id>/worker-<n>/<slug>.<ext>` and return the paths with the report.
+- [ ] When the lane has reported, run `git worktree remove <lane path>`. Nothing else removes it.
 
 ## <Task as a verb phrase> (<PR id>)
 
@@ -99,18 +100,18 @@ Each live lane runs in its own worktree at the PR head, per the Isolation sectio
 
 - [ ] <Test file and the case it gains.> Run `<command>`.
 
-**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `<swarm workers model>` at the PR head, per the boot recipe.
+**Verify, live.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked. Ten lanes on `<swarm workers model>` at the PR head, per the boot recipe. A UI lane saves a screenshot. Any other lane saves its captured output.
 
-- [ ] Lane 1. Regression lane against trunk. Run <the same load-bearing scenario> at trunk and head. If trunk lacks the feature, record that and gate <the behavior the diff adds plus the end state the user waits for>. Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 2. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 3. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 4. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 5. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 6. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 7. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 8. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 9. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
-- [ ] Lane 10. <Scenario.> Save `<slug>.png`. Pass when <predicate>.
+- [ ] Lane 1. Regression lane against trunk. Run <the same load-bearing scenario> at trunk and head. If trunk lacks the feature, record that and gate <the behavior the diff adds plus the end state the user waits for>. Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 2. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 3. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 4. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 5. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 6. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 7. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 8. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 9. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
+- [ ] Lane 10. <Scenario.> Save `<slug>.<ext>`. Pass when <predicate>.
 
 **Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
@@ -121,9 +122,9 @@ Each live lane runs in its own worktree at the PR head, per the Isolation sectio
 
 **Review gate.** The operator reviews before merge.
 
-- [ ] Copy lane <n> screenshots into `<media path>/<pr-id>-review-<slug>.png`.
-- [ ] Record a 30 to 60 second video of the change in a lane worktree. For a web UI in T3, use `preview_recording_start` and `preview_recording_stop`. Save it as `<media path>/<pr-id>-review.mp4`.
-- [ ] Post the screenshots and the video in chat. Stop at merge-ready. Wait for the operator's click.
+- [ ] Copy the lane <n> evidence into `<media path>/<pr-id>-review-<slug>.<ext>`.
+- [ ] <UI change only, else delete this box.> Record a 30 to 60 second video in a lane worktree. For a web UI in T3, use `preview_recording_start` and `preview_recording_stop`, and save it as `<media path>/<pr-id>-review.mp4`. For a native app, the screenshots are the record.
+- [ ] Post the screenshots or the captured output in chat for the operator. Stop at merge-ready. Wait for the operator's click.
 
 **Merge.**
 

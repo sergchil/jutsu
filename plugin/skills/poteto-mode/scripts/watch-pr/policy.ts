@@ -251,9 +251,11 @@ function gateReason(
   if (row.kind === "merged") return null;
   if (row.kind === "closed") return "closed-without-merge";
   if (row.facts.isDraft && !allowDraft) return "draft-pr";
-  return row.facts.reviewDecision === "CHANGES_REQUESTED"
-    ? "changes-requested"
-    : null;
+  if (row.facts.reviewDecision === "CHANGES_REQUESTED")
+    return "changes-requested";
+  // GitHub says BEHIND when the base requires an up-to-date branch and this
+  // head is not. The merge would be refused, so the PR is not ready.
+  return row.facts.mergeStateStatus === "BEHIND" ? "behind-base" : null;
 }
 function gateBlocker(
   row: T.PrSnapshot,

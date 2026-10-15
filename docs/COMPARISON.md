@@ -88,7 +88,7 @@ Where others still do better: pmwoz keeps 9 drift files where jutsu keeps 52 who
 - To tell "no CI" from "checks not registered yet", `watch-pr` looks for a check rollup on the PR's last 50 commits only. On a longer PR, checks on older commits are not seen.
 - `worktree-audit.sh` uses `awk`. It was not tested with mawk.
 - `watch-pr` reading past 100 review threads is tested with fake GitHub pages, not on a real PR that has more than 100 threads.
-- Worktree isolation is a rule in each brief, not something T3 enforces. Most ports above work the same way.
+- T3 makes a worktree for a delegated writer (`delegate_task` with `isolation: "worktree"`, since T3 nightly 2026-10-14), and jutsu uses it. A native `Agent` writer, or a lane on a PR head, still gets a worktree the brief creates by hand, which T3 does not enforce or clean up. jutsu's use of `isolation` is read from T3's source, not yet run live.
 - The automated tests cover the build, checks, hooks, installer, and bundled scripts, not whole playbooks.
 - New repo: no stars, forks, or outside issues yet.
 

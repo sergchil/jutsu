@@ -22,6 +22,8 @@ cd jutsu && ./install.sh
 
 Needs Claude Code 2.1.292+ and Python 3.9+. The T3 tools need T3 Code nightly from 2026-10-03; without T3, jutsu falls back to plain Claude Code. If another pstack port is installed, the installer says how to turn it off.
 
+Also needs [bun](https://bun.sh) and the GitHub CLI `gh` on your PATH. Neither ships with macOS or T3. bun runs `watch-pr`, the PR verdict that Babysit and Shipping use, and `orch`, the program store behind Orchestrate. Their first run installs one small package (`commander`) next to the scripts, so it needs the network once. `gh` handles every PR step. The installer warns when either is missing; everything else works without them.
+
 ## Use
 
 - Type `$jutsu <task>` in a T3 thread (or `/jutsu <task>`). Poteto mode stays on for the thread; `/jutsu off` stops it.

@@ -28,13 +28,50 @@ const HOW_TO_READ_MARKERS = [
 const PERF_ITEMS = ["Metric.", "Probe.", "Baseline.", "Rule."];
 const BOX = /^\s*- \[[ x]\] (.*)$/;
 
+const USAGE = `Usage: bun check-plan.mjs <plan.md>   (node check-plan.mjs works too)
+
+Checks a multi-phase plan against the skeleton in playbooks/multi-phase-plan.md.
+Prints one line per PR section, then every problem. Exits 0 when clean,
+1 when it found problems, 2 on a usage error.`;
+// A placeholder is <text> that starts with a letter and does not follow an
+// identifier character, so `Promise<void>` and `Map<K, V>` are not flagged.
+// Placeholders nest (<rule from `<jutsu>/x.md`>), so strip the innermost first.
+const PLACEHOLDER = /(?<![A-Za-z0-9_])<([A-Za-z][^<>\n]*)>/g;
+const HTML_TAG = /^\/?(a|b|i|p|br|hr|em|img|kbd|sub|sup|code|pre|span|div|details|summary|strong)\b/i;
+const IMAGE_EVIDENCE = /Save `[^`]*\.(png|jpe?g|gif|webp|mp4|mov)`/i;
+const placeholders = (text) => {
+	const found = [];
+	let current = text;
+	let previous;
+	do {
+		previous = current;
+		current = current.replace(PLACEHOLDER, (match, inner) => {
+			if (HTML_TAG.test(inner) || inner.includes("://")) return `\u0001${inner}\u0002`;
+			found.push(match.replace(/\u0003/g, "<...>"));
+			return "\u0003";
+		});
+	} while (current !== previous);
+	return found;
+};
+
 const file = process.argv[2];
+if (file === "--help" || file === "-h") {
+	console.log(USAGE);
+	process.exit(0);
+}
 if (!file) {
-	console.error("Usage: node check-plan.mjs <plan.md>");
+	console.error(USAGE);
 	process.exit(2);
 }
 
-const raw = fs.readFileSync(file, "utf8").split(/\r?\n/);
+let source;
+try {
+	source = fs.readFileSync(file, "utf8");
+} catch (error) {
+	console.error(`check-plan: cannot read ${file}: ${error.code ?? error.message}`);
+	process.exit(2);
+}
+const raw = source.split(/\r?\n/);
 const problems = [];
 const fail = (line, message) => problems.push(`${file}:${line}: ${message}`);
 
@@ -78,6 +115,7 @@ for (let i = start; i < raw.length; i++) {
 	if (/[\u2013\u2014]/.test(prose)) fail(n, "long dash");
 	if (/[\u2018\u2019\u201c\u201d]/.test(prose)) fail(n, "curly quote");
 	if (/: \S/.test(prose)) fail(n, "mid-sentence colon");
+	for (const p of placeholders(text)) fail(n, `unfilled placeholder "${p}"`);
 }
 
 const h2 = (l) => (!l.code && l.text.startsWith("## ") ? l.text.slice(3).trim() : null);
@@ -161,7 +199,7 @@ for (const pr of prSections) {
 		if (numbers.join(",") !== "1,2,3,4,5,6,7,8,9,10") fail(live.n, `${pr.title}: lanes are [${numbers.join(",")}], expected 1 to 10`);
 		for (const lane of lanes) {
 			if (!lane.m) fail(lane.n, `${pr.title}: live box is not a lane`);
-			else if (!/Save `[^`]+`/.test(lane.text)) fail(lane.n, `${pr.title}: lane ${lane.m[1]} names no screenshot`);
+			else if (!/Save `[^`]+`/.test(lane.text)) fail(lane.n, `${pr.title}: lane ${lane.m[1]} names no evidence file`);
 			else if (!lane.text.includes("Pass when")) fail(lane.n, `${pr.title}: lane ${lane.m[1]} has no pass predicate`);
 		}
 	}
@@ -180,7 +218,10 @@ for (const pr of prSections) {
 		} else {
 			const text = gate.lines.map((l) => l.text).join("\n");
 			if (gateBoxes.length === 0) fail(gate.n, `${pr.title}: Review gate has no box`);
-			for (const word of ["screenshot", "video", "operator"]) {
+			// Screenshots are required only when a lane drives a UI and saves an
+			// image. A CLI, service, or library PR shows its captured output.
+			const ui = live ? boxes(live.lines).some((b) => IMAGE_EVIDENCE.test(b.text)) : false;
+			for (const word of ui ? ["operator", "screenshot"] : ["operator"]) {
 				if (!text.includes(word)) fail(gate.n, `${pr.title}: Review gate lacks "${word}"`);
 			}
 		}

@@ -227,6 +227,43 @@ it("waits on a draft while checks are pending, then reports the draft gate", asy
   });
 });
 
+it("never reports READY on a branch that is behind its base", async () => {
+  const behind = await readSnapshot({
+    reader: fakeReader({ facts: { mergeStateStatus: "BEHIND" } }),
+    context: context(13),
+    pendingHistory: "omit",
+    allowDraft: false,
+  });
+  expect(classifyPr(behind)).toMatchObject({
+    kind: "blocker",
+    blocker: { kind: "merge-gate", reason: "behind-base", pr: { number: 13 } },
+  });
+  const bottom = await readSnapshot({
+    reader: fakeReader(),
+    context: context(14),
+    pendingHistory: "omit",
+    allowDraft: false,
+  });
+  expect(selectTierMajorStackDecision([bottom, behind])).toMatchObject({
+    kind: "blocker",
+    blocker: { kind: "merge-gate", reason: "behind-base", pr: { number: 13 } },
+  });
+  const decision = classifyPr(behind);
+  if (decision.kind !== "blocker") throw new Error("expected a blocker");
+  const text = renderPretty({
+    schemaVersion: 1,
+    sequence: 1,
+    observedAt: "2026-01-01T00:00:00Z",
+    mode: "single",
+    kind: "BLOCKER",
+    terminal: true,
+    exitCode: 6,
+    blocker: decision.blocker,
+  } as Parameters<typeof renderPretty>[0]);
+  expect(text).toContain("BLOCKER: behind-base");
+  expect(text).toContain("rebase");
+});
+
 describe("queued-stack cadence", () => {
   async function openSnapshot(pr: PrContext) {
     return readSnapshot({

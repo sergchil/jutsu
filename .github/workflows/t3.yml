@@ -1,9 +1,12 @@
 name: upstream t3
 
-# Every Monday, regenerate tools/t3-tools.txt from T3 Code's main branch. When T3
-# adds, renames or removes an MCP tool, open a pull request that lists the names and
-# the jutsu files that still mention a removed one. tools/check.py reads the list,
-# so CI on that branch fails while the plugin names a tool T3 no longer has.
+# Every Monday, regenerate T3 Code's snapshot from its main branch: the MCP tool names
+# (tools/t3-tools.txt) and the instruction files T3 puts in Claude's system prompt, plus
+# the delegate_task schema (tools/t3-instructions.txt). When either changes, open a pull
+# request with the diff. tools/check.py reads the tool list, so CI on that branch fails
+# while the plugin names a tool T3 no longer has. An instruction change fails nothing;
+# it means runtime.md may be wrong now, so re-probe what it touches (docs/UPDATING.md).
+# No step reads event text, so nothing untrusted reaches a shell.
 
 on:
   schedule:
@@ -23,23 +26,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: regenerate the T3 tool list
+      - name: regenerate the T3 snapshot
         id: sync
         run: |
+          python3 tools/t3_tools.py --ref main > "$RUNNER_TEMP/out.txt"
           {
-            echo "T3 Code's MCP tool names changed. Port every jutsu file listed next to a removed name,"
-            echo "then check that each added tool needs no mention in runtime.md."
+            echo "T3 Code changed what it tells Claude. Port every jutsu file listed next to a removed tool,"
+            echo "check that each added tool needs no mention in runtime.md, and re-probe each runtime.md"
+            echo "fact the instruction diff touches (docs/UPDATING.md, T3 updates)."
             echo
-            echo '```text'
-            python3 tools/t3_tools.py --ref main
-            echo '```'
+            echo '````diff'
+            # A PR body holds at most 65536 characters. The full diff is in the commit.
+            head -c 60000 "$RUNNER_TEMP/out.txt"
+            echo
+            echo '````'
           } > "$RUNNER_TEMP/t3.md"
-          cat "$RUNNER_TEMP/t3.md"
-          # The header names the pin and moves every week. Open a PR only when a name changed.
-          if diff <(git show HEAD:tools/t3-tools.txt | grep -v '^#') <(grep -v '^#' tools/t3-tools.txt) > /dev/null; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
+          cat "$RUNNER_TEMP/out.txt"
+          # The headers name the pin and move every week. t3_tools.py ignores them and
+          # ends with `changed: yes` only when a tool name or an instruction line changed.
+          if tail -n 1 "$RUNNER_TEMP/out.txt" | grep -qx 'changed: yes'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
       - name: open the update pull request
         id: pr
@@ -47,11 +55,12 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           branch: upstream/t3
-          title: Upstream T3 tool names changed
+          title: Upstream T3 tools or instructions changed
           body-path: ${{ runner.temp }}/t3.md
-          commit-message: "t3: regenerate tools/t3-tools.txt from T3 main"
+          commit-message: "t3: regenerate the T3 tool list and instruction snapshot from T3 main"
           add-paths: |
             tools/t3-tools.txt
+            tools/t3-instructions.txt
             port/t3.json
       # A pull request opened with GITHUB_TOKEN starts no workflows, so dispatch CI
       # on the branch; its check lands on the PR's head commit (see upstream.yml).

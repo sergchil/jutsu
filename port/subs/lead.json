@@ -23,36 +23,6 @@
       "pattern": "the **principle-guard-the-context-window** skill)",
       "replacement": "the **principle-guard-the-context-window** principle, `{{plugin}}/principles/principle-guard-the-context-window.md`)",
       "files": "^skills/poteto-mode/playbooks/trace-forensics\\.md$"
-    },
-    {
-      "id": "lead-desc-tdd",
-      "pattern": "\"Use only when the user explicitly asks for TDD, a failing test, or a regression test, OR when the bug has an obvious cheap local test target. Skip when the test path is unclear, expensive, integration-heavy, or not requested.\"",
-      "replacement": "\"TDD workflow for bug fixes: write one focused failing regression test before changing production code, when the bug has a clear, cheap local test target. Skip when the test path is unclear, expensive, or integration-heavy. Run it with /tdd, or when asked for TDD, a failing test, or a regression test.\"",
-      "files": "^skills/tdd/SKILL\\.md$"
-    },
-    {
-      "id": "lead-desc-ts",
-      "pattern": "TypeScript best practices. Use when reading or editing any .ts or .tsx file.",
-      "replacement": "TypeScript best practices grounded in type-system discipline. Applies to .ts and .tsx files; run it with /typescript-best-practices.",
-      "files": "^skills/typescript-best-practices/SKILL\\.md$"
-    },
-    {
-      "id": "lead-desc-bench",
-      "pattern": "Use when you run a benchmark or report a speedup or regression you measured.",
-      "replacement": "Run it with /benchmark-checklist before you report a speedup or regression you measured.",
-      "files": "^skills/benchmark-checklist/SKILL\\.md$"
-    },
-    {
-      "id": "lead-ketchup-1",
-      "pattern": "a chart or diagram from `/visualize`, or a generated image",
-      "replacement": "or a chart or diagram you render as an HTML page (published per [the runtime's Proof surfaces](../poteto-mode/references/runtime.md#proof-surfaces): `html_render` in T3, a file path outside it)",
-      "files": "^skills/ketchup/SKILL\\.md$"
-    },
-    {
-      "id": "lead-ketchup-2",
-      "pattern": "and a `/visualize` chart for numbers",
-      "replacement": "and a rendered HTML chart for numbers",
-      "files": "^skills/ketchup/SKILL\\.md$"
     }
   ]
 }

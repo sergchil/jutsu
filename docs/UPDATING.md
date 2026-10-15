@@ -48,3 +48,16 @@ git add -A && git commit -m "Sync upstream pstack <version>"
 ```
 
 `python3 tools/sync_upstream.py --dry-run` shows what changed and how each override would merge, without writing anything. `--ref <sha>` syncs to a specific upstream commit. `--summary FILE` also writes the Markdown the weekly pull request uses.
+
+## T3 updates
+
+T3 Code changes faster than pstack, and a change can make the runtime map wrong without touching a single jutsu file. `port/t3.json` pins the T3 commit jutsu was checked against. `tools/t3_tools.py` reads that commit's source and writes two snapshots: `tools/t3-tools.txt` (the MCP tool names, which `tools/check.py` enforces) and `tools/t3-instructions.txt` (the text T3 appends to Claude's system prompt, and the `delegate_task` schema).
+
+`.github/workflows/t3.yml` runs every Monday against T3's main branch. When a tool name or an instruction line changed, it opens a pull request on branch `upstream/t3` whose body is the diff. On that pull request:
+
+1. A removed tool fails CI and lists the jutsu files that name it. Port each one.
+2. For an added tool, decide whether a playbook should use it. If so, add it to the runtime section that owns that job.
+3. For an instruction diff, find each runtime.md fact it touches (search for the tool or parameter name). Re-probe it on a T3 build that has the change, fix the text, and re-date it. A rule T3's prompt now states itself comes out of the runtime.
+4. Merge. The new pin is the build jutsu is checked against.
+
+By hand: `python3 tools/t3_tools.py --ref main --dry-run` prints the same report. `--source <T3 checkout>` reads a local clone instead of fetching, and `--check` fails when the committed snapshots differ from the pin.

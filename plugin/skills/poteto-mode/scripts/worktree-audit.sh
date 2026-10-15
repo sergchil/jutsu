@@ -12,6 +12,13 @@
 #   Without it the base is origin/HEAD, then origin/main, then origin/master.
 #   origin/HEAD is the remote's default branch, not necessarily the branch PRs
 #   merge into; pass -b when they differ.
+#
+# T3 column: "root" when the worktree sits under a T3 worktrees folder
+# (<T3 home>/worktrees, the worktreesDirectory setting, or a previous one),
+# "thread" when a live T3 thread is bound to it, "root+thread" for both, "-"
+# otherwise. Such rows get the bucket t3-managed. T3's own storage cleanup owns
+# them, so they are reported and never pruned here. T3 home is $T3CODE_HOME,
+# else ~/.t3. Thread bindings come from T3's state database, read-only.
 set -u
 
 base=""
@@ -81,8 +88,48 @@ done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
 command -v rg >/dev/null 2>&1 || echo "warn: rg not found; LAST_CHAT is empty, so check every row by hand" >&2
 now=$(date +%s)
 
+# T3's worktree folders and thread-bound paths, one real path per line. This
+# mirrors T3's apps/server/src/worktreesDirectory.ts. The default folder is
+# always managed, plus every absolute setting that is not a filesystem root.
+realdir() { (cd "$1" 2>/dev/null && pwd -P); }
+t3_home="${T3CODE_HOME:-$HOME/.t3}"
+t3_roots=$(mktemp)
+t3_bound=$(mktemp)
+{
+	realdir "$t3_home/worktrees"
+	for settings in "$t3_home/userdata/settings.json" "$t3_home/dev/settings.json"; do
+		[ -f "$settings" ] || continue
+		jq -r '[.worktreesDirectory // empty] + (.previousWorktreesDirectories // []) | .[]' "$settings" 2>/dev/null \
+			| while read -r dir; do
+				case "$dir" in "~") dir="$HOME" ;; "~/"*) dir="$HOME/${dir#"~/"}" ;; esac
+				case "$dir" in /?*) d=$(realdir "$dir") && [ "$d" != / ] && echo "$d" ;; esac
+			done
+	done
+} | sort -u > "$t3_roots"
+if command -v sqlite3 >/dev/null 2>&1; then
+	for db in "$t3_home/userdata/statev2.sqlite" "$t3_home/dev/statev2.sqlite"; do
+		[ -f "$db" ] || continue
+		sqlite3 "file:$db?mode=ro" "SELECT json_extract(payload_json, '\$.worktreePath')
+			FROM orchestration_v2_projection_threads
+			WHERE deleted_at IS NULL AND json_extract(payload_json, '\$.worktreePath') IS NOT NULL" 2>/dev/null \
+			|| echo "warn: could not read T3 threads from $db; the T3 column shows folders only" >&2
+	done | while read -r p; do realdir "$p" || echo "$p"; done | sort -u > "$t3_bound"
+elif [ -d "$t3_home" ]; then
+	echo "warn: sqlite3 not found; the T3 column shows folders only, not thread bindings" >&2
+fi
+t3_signal() {
+	local real root sig=""
+	real=$(realdir "$1") || real="$1"
+	while read -r root; do
+		[ -n "$root" ] || continue
+		case "$real/" in "$root"/*) sig=root; break ;; esac
+	done < "$t3_roots"
+	grep -qxF -- "$real" "$t3_bound" && sig="${sig:+$sig+}thread"
+	echo "${sig:--}"
+}
+
 echo "# base: $base"
-printf "SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT\tBUCKET\tWORKTREE\n"
+printf "SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT\tT3\tBUCKET\tWORKTREE\n"
 
 git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt; do
 	[ "$wt" = "$main_wt" ] && continue
@@ -169,9 +216,13 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
 			esac ;;
 		esac ;;
 	esac
+	# T3 cleans its own worktrees and a thread may still use this one, so the
+	# playbook only reports it. The other columns still show what is at stake.
+	t3=$(t3_signal "$wt")
+	[ "$t3" != - ] && bucket=t3-managed
 
-	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
-		"$size" "$age" "$merged" "$dirty" "$remote" "$pr" "$last" "$bucket" "$wt"
+	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+		"$size" "$age" "$merged" "$dirty" "$remote" "$pr" "$last" "$t3" "$bucket" "$wt"
 done | sort -t$'\t' -k1,1 -rh
 
-rm -f "$prs"
+rm -f "$prs" "$t3_roots" "$t3_bound"

@@ -1,12 +1,17 @@
 {
   "repo": "pingdotgg/t3code",
   "repository": "https://github.com/pingdotgg/t3code.git",
-  "commit": "4d73e1d5cdd32dbfb470e9422421cc40475d5e99",
-  "date": "2026-10-13",
+  "commit": "3417bc3856a25fa772f969faeaf8428a58010d47",
+  "date": "2026-10-14",
   "toolkits": "apps/server/src/mcp/toolkits",
   "paths": [
     "apps/server/src/mcp/toolkits",
     "packages/contracts/src",
     "packages/shared/src"
+  ],
+  "instructions": [
+    "packages/provider-core/src/server/orchestrationInstructions.ts",
+    "packages/provider-core/src/server/runtimeInstructions.ts",
+    "packages/contracts/src/orchestratorMcp.ts"
   ]
 }

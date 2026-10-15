@@ -10,7 +10,7 @@ Answer the user's question about jutsu, hand them a prompt they can send, and li
 
 A message that asks for work, such as "use jutsu to fix this bug", is not a help question. Read [`poteto-mode`]({{plugin}}/skills/poteto-mode/SKILL.md), do the work under it, and mention once that `/jutsu` keeps it on for the rest of the session.
 
-This file maps questions to the skills and pages that hold the answers. Those files own the details. Read the file you route to before you quote it, and trust it when it disagrees with this map. The links here point into the installed plugin, which the user may not be able to open, so give the user the file's public copy: `https://github.com/sergchil/jutsu/blob/main/plugin/` followed by its path. The guide pages linked below are upstream pstack's guide, written for Cursor. Say so when you link one, and read its Cursor terms through [the runtime's Vocabulary]({{plugin}}/skills/poteto-mode/references/runtime.md#vocabulary).
+This file maps questions to the skills and pages that hold the answers. Those files own the details. Read the file you route to before you quote it, and trust it when it disagrees with this map. The links here point into the installed plugin, which the user may not be able to open, so give the user the file's public copy: `https://github.com/sergchil/jutsu/blob/main/plugin/` followed by its path.
 
 ## Find out what they need
 
@@ -25,7 +25,7 @@ Infer the need from the message and the conversation. A named situation, such as
 Check the state that changes the answer, and mention it only when it does:
 
 - No `.claude/jutsu-models.md` in the repo and no `jutsu-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`) means `/jutsu:setup-pstack` hasn't run for this user, so every role uses its default from [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles).
-- No `verify-*` skill in `.claude/skills/` or other app harness in the project means agents have no scripted way to drive the app. Mention `/jutsu:create-verification-skill` when the question is about proving a change works.
+- No `verify` skill (`.claude/skills/verify/`, or an older `verify-*`), no `run-*` skill, and no other app harness in the project means agents have no scripted way to drive the app. Mention `/jutsu:create-verification-skill` when the question is about proving a change works.
 
 When the models file is missing and it matters, ask whether the user wants to pick a model for each role and a reasoning budget now. It matters when the user is new, the question is about setup or cost, or the answer depends on which models run. Ask at most once per chat. If the need is also unclear, ask both questions in the same `AskUserQuestion` call. Offer two choices:
 
@@ -35,24 +35,25 @@ When the models file is missing and it matters, ask whether the user wants to pi
 ## Get set up
 
 1. Install jutsu per the [jutsu README](https://github.com/sergchil/jutsu#readme). It is a Claude Code plugin, and T3 Code runs the user's own `claude`, so one install serves both.
-2. Run [`/jutsu:setup-pstack`]({{plugin}}/skills/setup-pstack/SKILL.md). It asks for a reasoning budget, maps a Claude model and effort to each role, and writes `jutsu-models.md`. In T3 it reads the live model catalog and can add a second Claude account as a target. The file applies to new sessions.
+2. Run [`/jutsu:setup-pstack`]({{plugin}}/skills/setup-pstack/SKILL.md). It asks for a reasoning budget, maps a model and effort to each role, and writes `jutsu-models.md`. In T3 it reads the live model catalog and can add any provider T3 can delegate to, such as Codex, Cursor, or a second Claude account. A non-Claude seat makes the review and arena panels cross-vendor. Without one they stay Claude-only, with weaker diversity. Each skill reads the file when it runs.
 3. Start a real task with `/jutsu`, a goal, and a check that can pass or fail.
 
-Installing changes nothing until the user types `/jutsu` or another jutsu skill. No jutsu skill loads from the user's words alone, because every one is user-invoked. The README has the details, including how to uninstall. Offer to word their first prompt with them, per [`references/prompting.md`](references/prompting.md).
+Installing changes nothing until the user types `/jutsu` or another jutsu skill. Most jutsu skills load only when the user types them. Three can also load on their own when the work matches. They are `tdd`, `typescript-best-practices`, and `benchmark-checklist`. The README has the details, including how to uninstall. Offer to word their first prompt with them, per [`references/prompting.md`](references/prompting.md).
 
 If cost is the worry, say where the tokens go and how to spend fewer. jutsu spends extra tokens on subagents and review panels. Rerun `/jutsu:setup-pstack` and pick a smaller budget or cheaper models such as `sonnet` or `haiku`. A role set to `inherit` runs on the session's model and effort, which saves tokens when the session runs on a cheaper model or a lower effort. A shorter panel list runs fewer subagents, one for each entry. Save `/jutsu` for work that needs rigor.
 
-jutsu is pstack ported to Claude Code, built to run inside T3 Code. Plain Claude Code works too. Each step that needs a T3 tool names its fallback in [the runtime]({{plugin}}/skills/poteto-mode/references/runtime.md#host). Other tools that read the Agent Skills format can read the files, but the workflow skills spawn Claude subagents with the `Agent` tool and the mode hook is a Claude Code plugin hook, so those parts need Claude Code.
+jutsu is pstack ported to Claude Code, built to run inside T3 Code. Plain Claude Code works too. Each step that needs a T3 tool names its fallback in [the runtime]({{plugin}}/skills/poteto-mode/references/runtime.md#host).
 
-In T3, jutsu uses T3's own tools where Claude Code has none. `watch_pull_request` and `schedule_task` wake it on PR events and timed ticks. `t3_thread_launch` gives a long-lived PR owner its own thread and worktree. `delegate_task` runs a role on another Claude account. `preview_*` drives web UIs, `device_*` drives simulators, `html_render` publishes visual reports, and `t3_thread_list`, `t3_thread_read`, and `t3_thread_search` read past threads. [The runtime]({{plugin}}/skills/poteto-mode/references/runtime.md) maps each one and its fallback.
+In T3, jutsu uses T3's own tools where Claude Code has none. `watch_pull_request` and `schedule_task` wake it on PR events and timed ticks. `t3_thread_launch` gives a long-lived PR owner its own thread and worktree. `delegate_task` runs a role on another provider or Claude account. `preview_*` drives web UIs, `device_*` drives simulators, `html_render` publishes visual reports, and `t3_thread_list`, `t3_thread_read`, and `t3_thread_search` read past threads. [The runtime]({{plugin}}/skills/poteto-mode/references/runtime.md) maps each one and its fallback.
 
 ## Start a task with `/jutsu`
 
-`/jutsu` matches the task to a playbook, copies the playbook's steps into the todo list, and runs the other skills as the steps need them. A step it skips stays in the list as `skip: <reason>`. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one. [Guide page 2](https://github.com/cursor/plugins/blob/main/pstack/docs/guide/02-poteto-mode.md) has examples.
+`/jutsu` matches the task to a playbook, copies the playbook's steps into the todo list, and runs the other skills as the steps need them. A step it skips stays in the list as `skip: <reason>`. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one.
 
 How `/jutsu` stays on:
 
 - `/jutsu <task>` at the start of a message, or `$jutsu` from T3's skill picker, turns poteto mode on for the rest of the session. `/jutsu:poteto-mode` does the same.
+- Start any other jutsu skill with `/jutsu:<skill>`. T3's `$` picker sends `$jutsu:<skill>` as plain text, so it runs nothing. Only `$jutsu` works there.
 - While it is on, a plugin hook adds a one-line reminder to every turn. The reminder says to apply the mode to a new task that matches a playbook or needs rigor, and to skip it on a casual turn or when the user opts out. So the mode stays on without taking over casual turns. After a compaction or a resume, the hook also tells the model to reread the router.
 - `/jutsu off` turns it off. A new session starts with it off.
 
@@ -82,7 +83,7 @@ The default answer is `/jutsu`, which runs most of the others when its steps nee
 | Clean AI tells out of prose | [`/jutsu:unslop`]({{plugin}}/skills/unslop/SKILL.md) |
 | Write docs, an RFC, a README, a PR description, or a commit message to a standard | [`/jutsu:technical-writing`]({{plugin}}/skills/technical-writing/SKILL.md) |
 | Hear the last reply again in plain words | [`/jutsu:bro`]({{plugin}}/skills/bro/SKILL.md) |
-| Give agents a scripted way to drive the app and prove behavior | [`/jutsu:create-verification-skill`]({{plugin}}/skills/create-verification-skill/SKILL.md) |
+| Give agents a scripted way to drive the app and prove behavior, as the project's `verify` skill | [`/jutsu:create-verification-skill`]({{plugin}}/skills/create-verification-skill/SKILL.md) |
 | Bring a verification skill and its feature map back in line with the app | [`/jutsu:maintain-verification-skill`]({{plugin}}/skills/maintain-verification-skill/SKILL.md) |
 | Vet a performance number before reporting or acting on it | [`/jutsu:benchmark-checklist`]({{plugin}}/skills/benchmark-checklist/SKILL.md) |
 | Run a large or cross-cutting change, or one to review after stepping away | [`/jutsu:figure-it-out`]({{plugin}}/skills/figure-it-out/SKILL.md) |
@@ -106,9 +107,6 @@ Close calls:
 
 Not in jutsu:
 
-- Cursor's `/deslop` and its UI and CLI drivers. jutsu deslops a diff before commit per [the runtime's Missing companions]({{plugin}}/skills/poteto-mode/references/runtime.md#missing-companions), and drives the real app per [its Proof surfaces]({{plugin}}/skills/poteto-mode/references/runtime.md#proof-surfaces): T3's `preview_*` tools for web UIs, `device_*` for simulators, and the terminal for CLIs.
-- Cursor's `/create-skill` and its wake loop. Writing a skill follows the [Authoring a skill playbook]({{plugin}}/skills/poteto-mode/playbooks/authoring-a-skill.md), and Claude Code's `skill-creator` plugin helps with evals when installed. Waking on a tick or a PR event follows [the runtime's Waking]({{plugin}}/skills/poteto-mode/references/runtime.md#waking).
-- `/make-bot-ui`, upstream's page whose buttons wake a Grok Bot over a webhook. jutsu does not ship it.
 - jutsu has no `/orchestrate` skill. Orchestrate is a `/jutsu` playbook. If the slash menu shows `/orchestrate`, another plugin provides it.
 
 ## Playbooks and principles
@@ -122,11 +120,11 @@ Playbooks are step lists inside `/jutsu`, not skills, so they have no slash comm
 - "full autopilot on this queue" runs Autopilot-full. "stack them, don't ship" runs Autopilot-stack.
 - "run the eval playbook" runs Eval.
 
-Without `/jutsu`, a phrase such as "babysit this pr" can start Claude Code's `/autofix-pr` or T3's own PR watching for the same job instead. With `/jutsu` on, the Babysit playbook wins. The Playbooks section of [`poteto-mode`]({{plugin}}/skills/poteto-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](https://github.com/cursor/plugins/blob/main/pstack/docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
+Without `/jutsu`, a phrase such as "babysit this pr" can start Claude Code's `/autofix-pr` or T3's own PR watching for the same job instead. With `/jutsu` on, the Babysit playbook wins. The Playbooks section of [`poteto-mode`]({{plugin}}/skills/poteto-mode/SKILL.md) lists every playbook and when it applies.
 
 jutsu has no planning skill. Plan mode in T3 or Claude Code works alongside it. For work that spans phases or stacked PRs, asking `/jutsu` for a plan runs the [Multi-phase plan playbook]({{plugin}}/skills/poteto-mode/playbooks/multi-phase-plan.md), which writes the plan and doesn't implement it. For a design question, the Prototype playbook or `/jutsu:architect` settles it in code first.
 
-Principles are one-rule files in `{{plugin}}/principles/` that `/jutsu` reads and cites in its replies. The user rarely asks for one. They steer with the names instead, as in "apply prove it works. show me the real output." A principle has no slash command. Naming it, as in "read the prove-it-works principle", loads it on demand from [`principle-prove-it-works.md`]({{plugin}}/principles/principle-prove-it-works.md) and its siblings. [Guide page 8](https://github.com/cursor/plugins/blob/main/pstack/docs/guide/08-principles.md) lists them.
+Principles are one-rule files in `{{plugin}}/principles/` that `/jutsu` reads and cites in its replies. The user rarely asks for one. They steer with the names instead, as in "apply prove it works. show me the real output." A principle has no slash command. Naming it, as in "read the prove-it-works principle", loads it on demand from [`principle-prove-it-works.md`]({{plugin}}/principles/principle-prove-it-works.md) and its siblings.
 
 ## Fix a run that went wrong
 
@@ -135,17 +133,18 @@ Principles are one-rule files in `{{plugin}}/principles/` that `/jutsu` reads an
 | The mode stopped applying after a few turns | It is a new session, or `/jutsu off` ran, or the task was started without `/jutsu` at the start of a message. Start the task with `/jutsu`. If the turn reminder never appears, check that jutsu is enabled with `claude plugin list`. |
 | Every turn shows two routers or two reminders | Another pstack plugin is enabled next to jutsu, such as `pstack@pstack-claude`. Disable it with `claude plugin disable pstack@pstack-claude`, once in each Claude config dir that T3 or the user runs. |
 | A question got treated as the next step of the last task | Say "new task", or say the turn doesn't need the mode. |
-| A new model choice had no effect | `jutsu-models.md` applies to new sessions. Start one. A repo `.claude/jutsu-models.md` also wins over the one in the Claude config dir. |
+| A new model choice had no effect | A repo `.claude/jutsu-models.md` wins over the one in the Claude config dir, so check which one the run read. Each skill reads the file when it runs, so rerun the skill, or say "reread jutsu-models.md". |
 | Runs cost more than expected | See the cost paragraph under Get set up. |
-| A skill didn't load on its own | Every jutsu skill is user-invoked. It loads when the user types it, or when `/jutsu` reads its file, and `/jutsu` doesn't run every skill. |
+| A skill didn't load on its own | Most jutsu skills are user-invoked. They load when the user types `/jutsu:<skill>`, or when `/jutsu` reads the file, and `/jutsu` doesn't run every skill. Only `tdd`, `typescript-best-practices`, and `benchmark-checklist` load on their own. |
+| `$jutsu:<skill>` from T3's picker did nothing | T3 sends it as plain text. Type `/jutsu:<skill>` instead. `$jutsu` alone works. |
 | A T3 tool failed as unknown, or no PR watch or delegation ran | T3 stable ships only the preview, device, and PR link tools. The orchestration tools need a T3 nightly. jutsu takes the fallback in [the runtime's Host]({{plugin}}/skills/poteto-mode/references/runtime.md#host) and says so. |
 | A `device_*` call was refused | Device access is off by default. Turn on agent device access in T3's settings. |
 | "babysit this pr" ran another PR watcher | Claude Code's `/autofix-pr` or T3's own PR watching matched the words. Start the request with `/jutsu`. |
 | Parallel agents overwrote each other | Give each writer its own worktree from your HEAD, per [the runtime's Isolation]({{plugin}}/skills/poteto-mode/references/runtime.md#isolation). |
-| An overnight run moved but finished nothing | The run needs a check that can pass or fail, not a duration. See [guide page 7](https://github.com/cursor/plugins/blob/main/pstack/docs/guide/07-overnight.md). |
+| An overnight run moved but finished nothing | The run needs a check that can pass or fail, not a duration. |
 | The reply claims success from a green build | Ask for the real command, flow, stored value, or profile. That's the prove-it-works principle. |
 
-For a run that drifts, [`references/prompting.md`](references/prompting.md) has one-line steers. [Guide page 10](https://github.com/cursor/plugins/blob/main/pstack/docs/guide/10-recipes-and-pitfalls.md) has more pitfalls and the recipes worth copying.
+For a run that drifts, [`references/prompting.md`](references/prompting.md) has one-line steers, and [`references/recipes.md`](references/recipes.md) has recipes worth copying.
 
 ## Make jutsu my own
 
@@ -153,8 +152,6 @@ For a run that drifts, [`references/prompting.md`](references/prompting.md) has 
 - [`/jutsu:reflect`]({{plugin}}/skills/reflect/SKILL.md) after a session turns its lessons into skill edits the user approves.
 - `/jutsu write a skill for <workflow>` runs the authoring playbook. The eval playbook tests a skill change blind.
 - Fix a misbehaving skill in its own PR, not inside the feature work where it went wrong.
-
-[Guide page 9](https://github.com/cursor/plugins/blob/main/pstack/docs/guide/09-make-it-yours.md) covers each of these.
 
 ## Reply
 

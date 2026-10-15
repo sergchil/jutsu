@@ -1,0 +1,25 @@
+{
+  "substitutions": [
+    {
+      "id": "fit-pb-trace-speed",
+      "pattern": "Pick each subagent's reasoning level and fast or standard speed for the job, per the Subagents section.",
+      "replacement": "Pick each subagent's `effort` for the job, per the Subagents section.",
+      "files": "^skills/poteto-mode/playbooks/trace-forensics\\.md$",
+      "regex": false
+    },
+    {
+      "id": "fit-pb-triage-local-read",
+      "pattern": "The goal is to stop treating every comment as a required code change.",
+      "replacement": "The goal is to stop treating every comment as a required code change.\n\nAlso read `.jutsu/bugbot-triage.local.md` under the store root ([the runtime's Store](runtime.md#store)) when it exists. It holds this repo's learned patterns in the format below. This file is rebuilt from upstream on every update, so new patterns go to the local file, never here.",
+      "files": "^skills/poteto-mode/references/bugbot-triage\\.md$",
+      "regex": false
+    },
+    {
+      "id": "fit-pb-triage-local-append",
+      "pattern": "Append new candidate learnings here during or after babysitting when they look team-useful but not yet mature. Prefer promoting recurring candidates into the section above once several PRs confirm the pattern.",
+      "replacement": "Append new candidate learnings to `.jutsu/bugbot-triage.local.md` during or after babysitting, not to this file. Promote a candidate there to `recurring` once several PRs confirm the pattern.",
+      "files": "^skills/poteto-mode/references/bugbot-triage\\.md$",
+      "regex": false
+    }
+  ]
+}

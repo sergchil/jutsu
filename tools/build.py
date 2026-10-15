@@ -29,7 +29,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = ROOT / "port" / "spec.json"
-SUBS = ROOT / "port" / "substitutions.json"
 OVERRIDES = ROOT / "port" / "overrides"
 LOCK = ROOT / "port" / "overrides.lock.json"
 REASONS = ROOT / "port" / "overrides.json"
@@ -110,8 +109,8 @@ def transform_frontmatter(out_rel: str, text: str, spec: dict) -> str:
 
 
 def load_substitutions() -> list:
-    """port/substitutions.json first, then port/subs/*.json in name order."""
-    subs = list(load_json(SUBS)["substitutions"])
+    """The rules in port/subs/*.json, in file name order."""
+    subs = []
     for extra in sorted((ROOT / "port" / "subs").glob("*.json")):
         for rule in load_json(extra)["substitutions"]:
             rule = dict(rule)

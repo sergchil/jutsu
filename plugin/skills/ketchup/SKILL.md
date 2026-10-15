@@ -30,8 +30,8 @@ Show each action item as a before and after, side by side, in a visual. For a ch
 
 ## Visuals
 
-A visual is a picture: a screenshot, a video, a Mermaid diagram, or a chart or diagram you render as an HTML page (published per [the runtime's Proof surfaces](../poteto-mode/references/runtime.md#proof-surfaces): `html_render` in T3, a file path outside it). A Markdown table is not a visual, even with before and after columns.
+A visual is a Mermaid diagram, a chart you render as an HTML page, a Markdown table, or a screenshot or video already captured in this chat. T3 renders Mermaid in chat, so draw states, flows, and structures as Mermaid. Draw numbers as a chart published per [the runtime's Proof surfaces](../../skills/poteto-mode/references/runtime.md#proof-surfaces) (`html_render` in T3, a file path outside it). Use a Markdown table when it is the clearest form, such as options side by side. Outside T3 the terminal shows Mermaid as code, so use a table there.
 
-Keep each visual small enough to read at a glance: at most six boxes, with at most eight words in each, not counting "No screenshot yet." Write labels as plain words a person would say, not tags like "Tests: pass". Group small items into one box. A fact that needs a sentence belongs in the text, or nowhere.
+Keep each visual small enough to read at a glance: at most six boxes or rows, with at most eight words in each. Write labels as plain words a person would say, not tags like "Tests: pass". Group small items into one box. A fact that needs a sentence belongs in the text, or nowhere.
 
-Use screenshots or a video when the change is visible. If a visible change has none, mark the box it belongs to "No screenshot yet," and say in a line under the visual what changed on screen. For anything else, draw the visual from facts you have: a Mermaid diagram for states, flows, and structures, and a rendered HTML chart for numbers. Never invent a number, and never draw or generate a picture of a screen you did not capture. Link only artifacts that exist.
+This turn is read-only, so it never captures a screenshot. When a visible change already has a screenshot or video in this chat, show it. When it has none, say in one line under the visual what changed on screen. Never invent a number, and never draw or generate a picture of a screen you did not capture. Link only artifacts that exist.
