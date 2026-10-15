@@ -204,7 +204,10 @@ class InstallTest(unittest.TestCase):
         self.assertTrue(self.link(self.default).is_symlink())
 
     def test_warns_but_installs_when_bun_and_gh_are_missing(self):
-        # PATH is /usr/bin:/bin here, which has neither bun nor gh on a stock Mac.
+        # An empty PATH dir: CI runners ship gh in /usr/bin, so /usr/bin:/bin is not enough.
+        empty = self.home / "empty-bin"
+        empty.mkdir()
+        self.env["PATH"] = str(empty)
         r = self.run_install()
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertTrue(self.link(self.default).is_symlink())
