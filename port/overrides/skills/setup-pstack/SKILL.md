@@ -77,4 +77,12 @@ Tell the user where the file was written. Every jutsu skill reads it when it run
 
 ### 7. Offer a verification skill (optional)
 
+<<<<<<< jutsu override
 Check whether the project has a way to drive the real app for proof (a `verify` skill in `.claude/skills/verify/`, an older `verify-*` skill, a `run-*` skill from Claude Code's `/run-skill-generator`, or an existing harness). If not, offer once: "want a project-local verification skill, so agents can drive the app the way a user does and prove changes work? I can generate one with /jutsu:create-verification-skill." On yes, read [`create-verification-skill`]({{plugin}}/skills/create-verification-skill/SKILL.md) and follow it. jutsu skills are user-invoked, so the Skill tool cannot start it. On no, move on without pushing.
+=======
+Check whether the project has a way to drive the real app for proof (a `verify-*` skill, or an existing harness). If not, offer once: "want a project-local verification skill, so agents can drive the app the way a user does and prove changes work? I can generate one with /create-verification-skill." On yes, invoke `/create-verification-skill` (resolves wherever pstack is installed: workspace, user, or plugin). On no, move on without pushing.
+
+### 8. Offer a formal verification skill (optional)
+
+Check whether the project already has a formal verification skill (a project skill that runs a model checker, a proof, or another verifier against the code). If not, offer once: "want a formal verification skill, so agents can prove a key property of your code holds in every case in scope, not only the cases tests reach? I can generate one with /create-formal-verification-skill." On yes, invoke `/create-formal-verification-skill` (resolves wherever pstack is installed: workspace, user, or plugin). On no, move on without pushing.
+>>>>>>> upstream d457567332aa

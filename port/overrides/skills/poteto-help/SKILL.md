@@ -24,8 +24,14 @@ Infer the need from the message and the conversation. A named situation, such as
 
 Check the state that changes the answer, and mention it only when it does:
 
+<<<<<<< jutsu override
 - No `.claude/jutsu-models.md` in the repo and no `jutsu-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`) means `/jutsu:setup-pstack` hasn't run for this user, so every role uses its default from [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles).
 - No `verify` skill (`.claude/skills/verify/`, or an older `verify-*`), no `run-*` skill, and no other app harness in the project means agents have no scripted way to drive the app. Mention `/jutsu:create-verification-skill` when the question is about proving a change works.
+=======
+- No `~/.cursor/rules/pstack-models.mdc` means `/setup-pstack` hasn't run for this user, so every role uses its default model.
+- No `verify-*` skill or other app harness in the project means agents have no scripted way to drive the app. Mention `/create-verification-skill` when the question is about proving a change works.
+- No formal verification skill in the project means no property is checked past what tests reach. Mention `/create-formal-verification-skill` when the question is about a race, an invariant, or another case tests rarely hit. When one exists and the code it covers changed after the commit it records as last in sync, mention `/maintain-formal-verification-skill` if the question touches that code.
+>>>>>>> upstream d457567332aa
 
 When the models file is missing and it matters, ask whether the user wants to pick a model for each role and a reasoning budget now. It matters when the user is new, the question is about setup or cost, or the answer depends on which models run. Ask at most once per chat. If the need is also unclear, ask both questions in the same `AskUserQuestion` call. Offer two choices:
 
@@ -34,15 +40,27 @@ When the models file is missing and it matters, ask whether the user wants to pi
 
 ## Get set up
 
+<<<<<<< jutsu override
 1. Install jutsu per the [jutsu README](https://github.com/sergchil/jutsu#readme). It is a Claude Code plugin, and T3 Code runs the user's own `claude`, so one install serves both.
 2. Run [`/jutsu:setup-pstack`]({{plugin}}/skills/setup-pstack/SKILL.md). It asks for a reasoning budget, maps a model and effort to each role, and writes `jutsu-models.md`. In T3 it reads the live model catalog and can add any provider T3 can delegate to, such as Codex, Cursor, or a second Claude account. A non-Claude seat makes the review and arena panels cross-vendor. Without one they stay Claude-only, with weaker diversity. Each skill reads the file when it runs.
 3. Start a real task with `/jutsu`, a goal, and a check that can pass or fail.
+=======
+1. Install with `/add-plugin pstack` in chat, or from Customize in the sidebar.
+2. Run [`/setup-pstack`](../setup-pstack/SKILL.md). It asks for a reasoning budget, maps a model to each role, and writes a rule. The rule applies to new chats. Then it offers once each to generate a verification skill and a formal verification skill for the project, unless the project already has one.
+3. Start a real task with `/poteto-mode`, a goal, and a check that can pass or fail.
+>>>>>>> upstream d457567332aa
 
 Installing changes nothing until the user types `/jutsu` or another jutsu skill. Most jutsu skills load only when the user types them. Three can also load on their own when the work matches. They are `tdd`, `typescript-best-practices`, and `benchmark-checklist`. The README has the details, including how to uninstall. Offer to word their first prompt with them, per [`references/prompting.md`](references/prompting.md).
 
 If cost is the worry, say where the tokens go and how to spend fewer. jutsu spends extra tokens on subagents and review panels. Rerun `/jutsu:setup-pstack` and pick a smaller budget or cheaper models such as `sonnet` or `haiku`. A role set to `inherit` runs on the session's model and effort, which saves tokens when the session runs on a cheaper model or a lower effort. A shorter panel list runs fewer subagents, one for each entry. Save `/jutsu` for work that needs rigor.
 
+<<<<<<< jutsu override
 jutsu is pstack ported to Claude Code, built to run inside T3 Code. Plain Claude Code works too. Each step that needs a T3 tool names its fallback in [the runtime]({{plugin}}/skills/poteto-mode/references/runtime.md#host).
+=======
+pstack is built for Cursor, and it also installs in Claude Code with `/plugin marketplace add cursor/plugins`, then `/plugin install pstack@cursor-plugins`. There, each command takes a `pstack:` prefix, such as `/pstack:poteto-mode`. The [Claude Code adapter](../../docs/harness/claude-code.md) maps the Cursor names, and a step that needs a Cursor-only feature, such as Bugbot or Automations, is skipped with a one-line note.
+
+Other tools can read the skills, because they use the Agent Skills format. But most workflow skills, including `/poteto-mode`, `/how`, `/why`, and `/teach`, spawn Cursor subagents with per-role models, and Custom Modes and `/loop` are Cursor features, so those parts may not work there.
+>>>>>>> upstream d457567332aa
 
 In T3, jutsu uses T3's own tools where Claude Code has none. `watch_pull_request` and `schedule_task` wake it on PR events and timed ticks. `t3_thread_launch` gives a long-lived PR owner its own thread and worktree. `delegate_task` runs a role on another provider or Claude account. `preview_*` drives web UIs, `device_*` drives simulators, `html_render` publishes visual reports, and `t3_thread_list`, `t3_thread_read`, and `t3_thread_search` read past threads. [The runtime]({{plugin}}/skills/poteto-mode/references/runtime.md) maps each one and its fallback.
 
@@ -65,6 +83,7 @@ The default answer is `/jutsu`, which runs most of the others when its steps nee
 
 | The user wants to | Skill |
 |---|---|
+<<<<<<< jutsu override
 | Do any non-trivial task with rigor | [`/jutsu`]({{plugin}}/skills/poteto-mode/SKILL.md) |
 | Check that the agent understood their goal and the problem before it starts | [`/jutsu:in-your-own-words`]({{plugin}}/skills/in-your-own-words/SKILL.md) |
 | Know how code works now, or where new code should live | [`/jutsu:how`]({{plugin}}/skills/how/SKILL.md) |
@@ -95,6 +114,42 @@ The default answer is `/jutsu`, which runs most of the others when its steps nee
 | Find their way around jutsu | `/jutsu:poteto-help` |
 
 If a skill directory next to this one is missing from the table, read its frontmatter and route by its description. Principles live in `{{plugin}}/principles/` and are covered under principles below.
+=======
+| Do any non-trivial task with rigor | [`/poteto-mode`](../poteto-mode/SKILL.md) |
+| Check that the agent understood their goal and the problem before it starts | [`/in-your-own-words`](../in-your-own-words/SKILL.md) |
+| Aim a task higher before starting: more expert, more outcome-focused, not overspecified | [`/sharpen`](../sharpen/SKILL.md) |
+| Know how code works now, or where new code should live | [`/how`](../how/SKILL.md) |
+| Know why code is shaped this way, or where a number came from | [`/why`](../why/SKILL.md) |
+| Understand a change or subsystem, explained plainly | [`/teach`](../teach/SKILL.md) |
+| Catch up on their own recent work on a topic | [`/recall`](../recall/SKILL.md) |
+| Catch up on what changed in this chat since their last message, in plain words and small visuals, with every item waiting on them listed and decidable from the reply alone | [`/ketchup`](../ketchup/SKILL.md) |
+| Know what a small diff could break outside itself | [`/blast-radius`](../blast-radius/SKILL.md) |
+| Settle types and module shape before code that crosses a function boundary | [`/architect`](../architect/SKILL.md) |
+| Get several attempts at one brief, merged into the best one | [`/arena`](../arena/SKILL.md) |
+| Run parallel checks over slices, or race workers, as cloud agents | [`/swarm`](../swarm/SKILL.md) |
+| Have different models review a diff and try to break it | [`/interrogate`](../interrogate/SKILL.md) |
+| Fix a bug test-first when a cheap local test exists | [`/tdd`](../tdd/SKILL.md) |
+| Apply TypeScript rules to `.ts` or `.tsx` work | [`/typescript-best-practices`](../typescript-best-practices/SKILL.md) |
+| Strip comments before review, using a reviewer that didn't write them | [`/no-comments`](../no-comments/SKILL.md) |
+| Clean AI tells out of prose | [`/unslop`](../unslop/SKILL.md) |
+| Write docs, an RFC, a README, a PR description, or a commit message to a standard | [`/technical-writing`](../technical-writing/SKILL.md) |
+| Hear the last reply again in plain words | [`/bro`](../bro/SKILL.md) |
+| Give agents a scripted way to drive the app and prove behavior | [`/create-verification-skill`](../create-verification-skill/SKILL.md) |
+| Bring a verification skill and its feature map back in line with the app | [`/maintain-verification-skill`](../maintain-verification-skill/SKILL.md) |
+| Formally verify a race, invariant, or other property that tests rarely reach | [`/create-formal-verification-skill`](../create-formal-verification-skill/SKILL.md) |
+| Bring a formal verification back in line after the code it covers changed, and learn whether a failure is drift or a bug | [`/maintain-formal-verification-skill`](../maintain-formal-verification-skill/SKILL.md) |
+| Vet a performance number before reporting or acting on it | [`/benchmark-checklist`](../benchmark-checklist/SKILL.md) |
+| Run a large or cross-cutting change, or one to review after stepping away | [`/figure-it-out`](../figure-it-out/SKILL.md) |
+| Keep a decision log during a run, and review it afterward | [`/show-me-your-work`](../show-me-your-work/SKILL.md) |
+| Pick a model for each role and a reasoning budget | [`/setup-pstack`](../setup-pstack/SKILL.md) |
+| Turn their own working habits into a personal mode skill | [`/automate-me`](../automate-me/SKILL.md) |
+| Turn what a finished task taught into skill edits | [`/reflect`](../reflect/SKILL.md) |
+| Stop agents from repeating the same mistakes in this repo | [`/correct`](../correct/SKILL.md) |
+| Build a page whose buttons wake a Grok Bot over a webhook | [`/make-bot-ui`](../make-bot-ui/SKILL.md) |
+| Find their way around pstack | `/poteto-help` |
+
+If a skill directory next to this one is missing from the table, read its frontmatter and route by its description. The `principle-*` directories are covered under principles below.
+>>>>>>> upstream d457567332aa
 
 Close calls:
 

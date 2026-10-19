@@ -9,4 +9,8 @@
 
 **Choosing between the autopilots.** Autopilot-full when the PRs are independent and landing authority is granted. Autopilot-stack when the operator wants review before landing, the work is sequenced or coupled, or merge authority is withheld.
 
+<<<<<<< jutsu override
 **Reply:** links to the stack root and tip, whether each link's Guide tab is written, a one-line verdict summary per link, and anything parked or excluded with the reason.
+=======
+**Reply:** catch the operator up per the **ketchup** skill, with links to the stack root and tip, a one-line verdict per link, and anything parked or excluded with the reason.
+>>>>>>> upstream d457567332aa
