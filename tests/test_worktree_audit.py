@@ -7,6 +7,10 @@ Upstream bugs this pins:
   worktree safe.
 The squash-pruned, reused-name, and behind-merged cases come from the open upstream fix
 cursor/plugins#492, so a later re-merge cannot regress them.
+From pstack-claude (MIT, worktree-audit.mjs): ignored paths under build and cache
+directories (build/, node_modules/, __pycache__, ...) do not hold a worktree, but .env
+still does; commits only the worktree's HEAD reflog reaches are hold-reflog; a locked
+worktree is hold-locked with its reason in the LOCKED column.
 The t3-* cases pin the jutsu T3 column: a worktree in a T3 worktrees folder, or bound to a
 live T3 thread, is t3-managed (reported, never pruned), whatever else it holds. They run
 against a fake T3 home in T3CODE_HOME, so the real ~/.t3 is never read.
@@ -31,7 +35,10 @@ EXPECTED = {
     "clean-on-main": ("clean", "no-remote", "safe"),
     "wip": ("wip:1", "no-remote", "hold-wip"),
     "untracked": ("untracked:1", "no-remote", "hold-local"),
-    "ignored": ("ignored:2", "no-remote", "hold-local"),
+    "ignored": ("ignored:1", "no-remote", "hold-local"),
+    "disposable-only": ("clean", "no-remote", "safe"),
+    "reflog-only": ("reflog:1", "detached", "hold-reflog"),
+    "locked": ("clean", "no-remote", "hold-locked"),
     "corrupt-index": ("unknown", "no-remote", "hold-wip"),
     "closed-pr": ("clean", "pushed", "review"),
     "closed-pr-unpushed": ("clean", "ahead1", "hold-unpushed"),
@@ -42,17 +49,21 @@ EXPECTED = {
     "behind": ("clean", "behind", "review"),
     "behind-merged": ("clean", "behind", "safe"),
     "squash-pruned": ("clean", "no-remote", "safe"),
+    "rewound": ("clean", "no-remote", "safe"),
     "reused-name": ("clean", "pushed", "safe"),
     "t3-root": ("clean", "no-remote", "t3-managed"),
     "t3-root-wip": ("wip:1", "no-remote", "t3-managed"),
+    "t3-root-locked": ("clean", "no-remote", "t3-managed"),
     "t3-custom": ("clean", "no-remote", "t3-managed"),
     "t3-previous": ("clean", "no-remote", "t3-managed"),
     "t3-deleted-thread": ("clean", "no-remote", "safe"),
 }
 if HAS_SQLITE3:
     EXPECTED["t3-thread"] = ("clean", "no-remote", "t3-managed")
+# name -> LOCKED column; every other row is "-".
+LOCKED_EXPECTED = {"locked": "agent at work", "t3-root-locked": "locked"}
 # name -> T3 column; every other row is "-".
-T3_EXPECTED = {"t3-root": "root", "t3-root-wip": "root", "t3-custom": "root", "t3-previous": "root"}
+T3_EXPECTED = {"t3-root": "root", "t3-root-wip": "root", "t3-root-locked": "root", "t3-custom": "root", "t3-previous": "root"}
 if HAS_SQLITE3:
     T3_EXPECTED["t3-thread"] = "thread"
 
@@ -116,7 +127,7 @@ class WorktreeAuditTest(unittest.TestCase):
         repo = base / "repo"
         git(base, "init", "-q", "-b", "main", str(repo))
         git(repo, "remote", "add", "origin", str(origin))
-        (repo / ".gitignore").write_text(".env\nbuild/\n")
+        (repo / ".gitignore").write_text(".env\nbuild/\nnode_modules/\n__pycache__/\n")
         (repo / "a.txt").write_text("a\n")
         git(repo, "add", "-A")
         git(repo, "commit", "-qm", "init")
@@ -131,6 +142,24 @@ class WorktreeAuditTest(unittest.TestCase):
         (ignored / ".env").write_text("SECRET=1\n")
         (ignored / "build").mkdir()
         (ignored / "build" / "out.bin").write_text("x")
+        # Only rebuildable build and cache output: nothing at stake.
+        disposable = worktree("disposable-only")
+        (disposable / "build").mkdir()
+        (disposable / "build" / "out.bin").write_text("x")
+        (disposable / "node_modules" / "pkg").mkdir(parents=True)
+        (disposable / "node_modules" / "pkg" / "index.js").write_text("x")
+        (disposable / "src" / "__pycache__").mkdir(parents=True)
+        (disposable / "src" / "__pycache__" / "m.pyc").write_text("x")
+        # A commit made on a detached HEAD, then left: only this worktree's HEAD reflog
+        # reaches it, and `git worktree remove` deletes that reflog.
+        reflog_only = worktree("reflog-only", detach=True)
+        commit(reflog_only, "orphan-work")
+        git(reflog_only, "checkout", "-q", "--detach", "main")
+        # Rewound on its branch: the branch reflog (shared, survives removal) keeps it.
+        rewound = worktree("rewound")
+        commit(rewound, "rewound-work")
+        git(rewound, "reset", "-q", "--hard", "HEAD~1")
+        git(repo, "worktree", "lock", "--reason", "agent at work", str(worktree("locked")))
         corrupt = worktree("corrupt-index")
         Path(git(corrupt, "rev-parse", "--path-format=absolute", "--git-path", "index")).write_bytes(b"garbage")
 
@@ -181,6 +210,7 @@ class WorktreeAuditTest(unittest.TestCase):
 
         worktree("t3-root", parent=t3 / "worktrees" / "repo")
         (worktree("t3-root-wip", parent=t3 / "worktrees" / "repo") / "a.txt").write_text("edited\n")
+        git(repo, "worktree", "lock", str(worktree("t3-root-locked", parent=t3 / "worktrees" / "repo")))
         worktree("t3-custom", parent=home / "custom-wt" / "repo")
         worktree("t3-previous", parent=base / "old-wt" / "repo")
         thread_wt = worktree("t3-thread")
@@ -230,8 +260,18 @@ class WorktreeAuditTest(unittest.TestCase):
 
     def test_only_clean_merged_work_is_safe(self):
         safe = sorted(name for name, row in self.rows.items() if row["BUCKET"] == "safe")
-        self.assertEqual(safe, ["behind-merged", "clean-on-main", "merged-pr", "reused-name", "squash-pruned",
-                                "t3-deleted-thread"])
+        self.assertEqual(safe, ["behind-merged", "clean-on-main", "disposable-only", "merged-pr", "reused-name",
+                                "rewound", "squash-pruned", "t3-deleted-thread"])
+
+    def test_locked_worktrees_show_their_reason(self):
+        self.assertIn("LOCKED", self.header)
+        for name, row in self.rows.items():
+            with self.subTest(worktree=name):
+                self.assertEqual(row["LOCKED"], LOCKED_EXPECTED.get(name, "-"))
+
+    def test_a_locked_t3_worktree_stays_t3_managed(self):
+        self.assertEqual(self.rows["t3-root-locked"]["BUCKET"], "t3-managed")
+        self.assertEqual(self.rows["t3-root-locked"]["LOCKED"], "locked")
 
     def test_t3_worktrees_are_reported_never_removable(self):
         self.assertIn("T3", self.header)

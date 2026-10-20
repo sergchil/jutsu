@@ -192,7 +192,7 @@
   "skills/poteto-mode/playbooks/worktree-cleanup.md": {
     "kind": "upstream-bug",
     "upstream": "https://github.com/cursor/plugins/issues/449",
-    "why": "Never removes a worktree with --force or rm -rf, and gets approval for untracked and ignored files first (#449, #470)."
+    "why": "Never removes a worktree with --force or rm -rf, and gets approval for untracked, ignored, reflog-only, and locked work first (#449, #470)."
   },
   "skills/poteto-mode/scripts/bootstrap.ts": {
     "kind": "runtime",
@@ -242,7 +242,7 @@
   "skills/poteto-mode/scripts/worktree-audit.sh": {
     "kind": "upstream-bug",
     "upstream": "https://github.com/cursor/plugins/issues/449",
-    "why": "Fixes #449 and #470, covers #492's cases, and buckets T3-managed worktrees so cleanup leaves them to T3."
+    "why": "Fixes #449 and #470, covers #492's cases, buckets T3-managed worktrees so cleanup leaves them to T3, and (from pstack-claude) skips build and cache dirs and holds reflog-only commits and locked worktrees."
   },
   "skills/recall/SKILL.md": {
     "kind": "runtime",
