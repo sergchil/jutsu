@@ -81,6 +81,7 @@ The default answer is `/jutsu`, which runs most of the others when its steps nee
 | Get several attempts at one brief, merged into the best one | [`/jutsu:arena`](../../skills/arena/SKILL.md) |
 | Run parallel checks over slices, or race workers, each in its own worktree | [`/jutsu:swarm`](../../skills/swarm/SKILL.md) |
 | Have different models review a diff and try to break it | [`/jutsu:interrogate`](../../skills/interrogate/SKILL.md) |
+| Get one deep audit of a branch for bugs, security, broken dev setup, and feature-flag leaks, with the PR's bot comments checked after | [`/jutsu:thermo-nuclear-review`](../../skills/thermo-nuclear-review/SKILL.md) |
 | Fix a bug test-first when a cheap local test exists | [`/jutsu:tdd`](../../skills/tdd/SKILL.md) |
 | Apply TypeScript rules to `.ts` or `.tsx` work | [`/jutsu:typescript-best-practices`](../../skills/typescript-best-practices/SKILL.md) |
 | Strip comments before review, using a reviewer that didn't write them | [`/jutsu:no-comments`](../../skills/no-comments/SKILL.md) |
@@ -108,6 +109,7 @@ Close calls:
 - `/jutsu:arena` gives every worker the same brief and merges the best parts. `/jutsu:swarm` splits work into slices or a race and returns one report.
 - `/jutsu:architect` implements right after it settles the design. Add "with checkpoint" to review the design before it writes code.
 - `/jutsu:interrogate` reviews the diff. `/jutsu:blast-radius` looks for breakage outside the diff and proves the one fact that makes the change safe.
+- `/jutsu:interrogate` is a panel of models with a code-quality lens. `/jutsu:thermo-nuclear-review` is one reviewer on bugs, security, dev setup, and feature-flag leaks.
 - `/jutsu:recall` rebuilds context across recent chats. `/jutsu:ketchup` covers only this chat since the user's last message. Resuming one specific chat or branch is the Session pickup playbook.
 - `/jutsu:figure-it-out` designs one rigorous run. The Orchestrate playbook runs a program that spans days and many PRs. The Autonomous run playbook drives one task to a finish condition.
 

@@ -72,7 +72,7 @@
   "skills/poteto-help/SKILL.md": {
     "kind": "naming",
     "upstream": null,
-    "why": "Rewritten for jutsu: /jutsu commands, AskUserQuestion, and jutsu's own pages, and drops Cursor's install steps and the excluded make-bot-ui row."
+    "why": "Rewritten for jutsu: /jutsu commands, AskUserQuestion, and jutsu's own pages, and drops Cursor's install steps and the excluded make-bot-ui row. Lists /jutsu:thermo-nuclear-review, imported from Cursor's thermos plugin."
   },
   "skills/poteto-help/references/prompting.md": {
     "kind": "runtime",
