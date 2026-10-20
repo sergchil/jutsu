@@ -1,0 +1,214 @@
+{
+  "Tools | `Task`": {
+    "theirs": "`Agent`",
+    "verdict": "same",
+    "jutsu": "The native `Agent` tool.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "native `Agent` tool"
+  },
+  "Tools | `AskQuestion`": {
+    "theirs": "`AskUserQuestion`. In `-p` mode it is absent, so ask in plain text.",
+    "verdict": "same",
+    "jutsu": "`AskUserQuestion`, with a non-empty description per option; plain text when the tool is absent.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "When `AskUserQuestion` is not in your tools, ask in plain text"
+  },
+  "Tools | Open a todolist": {
+    "theirs": "Use `TodoWrite` if the session offers it. Otherwise keep the list in your reply and update it at each phase.",
+    "verdict": "different",
+    "jutsu": "The task tools when present, else `.audit/<slug>.todo.md` in the main checkout.",
+    "why": "A list kept only in the reply is lost on compaction and cannot be read by a heartbeat or a resumed session; todo tools are off on current models, so the file is the normal path.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "\\.audit/<slug>\\.todo\\.md"
+  },
+  "Tools | Run another pstack skill (`/name` or \"the **name** skill\")": {
+    "theirs": "`Read` `<pstack>/skills/<name>/SKILL.md` and follow it. The `Skill` tool refuses most pstack skills. When you tell the user to type it, write `/pstack:<name>`.",
+    "verdict": "same",
+    "jutsu": "Skills are files: read `{{plugin}}/skills/<name>/SKILL.md` and follow it; the user types `/jutsu:<name>`.",
+    "where": "skills/poteto-mode/SKILL.md",
+    "expect": "are files, not entries in your skill list"
+  },
+  "Tools | `Grep`, `Glob`": {
+    "theirs": "`Bash` with `rg` when the session has no `Grep` or `Glob`.",
+    "verdict": "different",
+    "jutsu": "No rule.",
+    "why": "Claude Code gives the session its own search tools and a skill that names Grep runs fine with `rg`, so the rule changes nothing here.",
+    "where": "skills/poteto-mode/references/runtime.md"
+  },
+  "Subagent fields | `subagent_type: generalPurpose`": {
+    "theirs": "`subagent_type: \"general-purpose\"`",
+    "verdict": "same",
+    "jutsu": "`general-purpose`.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "`general-purpose`"
+  },
+  "Subagent fields | `poteto-agent`, `comment-sicko`": {
+    "theirs": "`pstack:poteto-agent`, `pstack:comment-sicko`",
+    "verdict": "same",
+    "jutsu": "`jutsu:poteto-agent`, `jutsu:comment-sicko`.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "jutsu:poteto-agent"
+  },
+  "Subagent fields | `readonly: true`": {
+    "theirs": "`subagent_type: \"Explore\"`. It keeps `Bash`, so the brief also says \"do not edit files\", and you check `git status` afterward.",
+    "verdict": "same",
+    "jutsu": "A read-only brief, plus `subagent_type: \"Explore\"` when the child only reads code.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "Explore"
+  },
+  "Subagent fields | `readonly: false`": {
+    "theirs": "`general-purpose`. It keeps the session's MCP servers.",
+    "verdict": "same",
+    "jutsu": "`jutsu:poteto-agent` inside a playbook step, or the type the routed skill names.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "`jutsu:poteto-agent` for every child inside a playbook step"
+  },
+  "Subagent fields | `environment: \"cloud\"`": {
+    "theirs": "`isolation: \"worktree\"`. Name the branch or commit the worker checks out.",
+    "verdict": "different",
+    "jutsu": "In T3, `delegate_task` with `isolation: \"worktree\"` from your HEAD commit; otherwise a hand-made `git worktree add` from your HEAD. Never `Agent` `isolation: \"worktree\"`.",
+    "why": "`Agent` `isolation: \"worktree\"` branches from the remote default branch unless the user set `worktree.baseRef: \"head\"`, so the worker misses local commits and stacked work.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "Do not use `Agent` `isolation: \\\"worktree\\\"`"
+  },
+  "Subagent fields | `environment: \"local\"`": {
+    "theirs": "Omit.",
+    "verdict": "same",
+    "jutsu": "Omit.",
+    "where": "skills/poteto-mode/references/runtime.md"
+  },
+  "Subagent fields | `cloud_base_branch: <b>`": {
+    "theirs": "Tell the worker to check out `<b>` first.",
+    "verdict": "different",
+    "jutsu": "Create the worker's worktree at that commit: `git worktree add <path> -b <branch> <commit>`.",
+    "why": "A worker that switches branches itself can do it in a shared checkout; making the worktree at the commit first keeps one checkout per writer.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "git worktree add <path> -b <branch> <commit>"
+  },
+  "Subagent fields | `run_in_background: true`": {
+    "theirs": "Omit. Subagents run in the background by default and notify you when they finish.",
+    "verdict": "different",
+    "jutsu": "Pass `run_in_background: true` unless the next step needs the result.",
+    "why": "Background is Claude Code's default (sub-agents docs), so passing it is harmless and keeps the intent visible in each call.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "`run_in_background`: true"
+  },
+  "Subagent fields | `resume`": {
+    "theirs": "Spawn a new agent and paste the earlier result into its brief.",
+    "verdict": "different",
+    "jutsu": "`SendMessage` resumes the child, live or finished, with its full history.",
+    "why": "Claude Code resumes a subagent by `SendMessage` (sub-agents docs, Resume subagents), which keeps its context; only one-shot `Explore` children need a new spawn.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "`SendMessage` to its name or id resumes a child"
+  },
+  "Subagent fields | `file_attachments`": {
+    "theirs": "List the paths in the brief.",
+    "verdict": "same",
+    "jutsu": "File pointers in the brief, not pasted context.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "file pointers instead of pasted context"
+  },
+  "Models | `claude-<family>-<version>-<effort>[-fast]`, such as `claude-opus-5-5-xhigh`": {
+    "theirs": "`model: \"opus\"` and `effort: \"xhigh\"`. `model` takes only `opus`, `sonnet`, `haiku`, `fable`. Drop `-fast`.",
+    "verdict": "same",
+    "jutsu": "`model` alias (`opus`, `sonnet`, `fable`, `haiku`) and `effort`; no speed setting.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "an alias only: `opus`, `sonnet`, `fable`, or `haiku`"
+  },
+  "Models | A `grok-*`, `gpt-*`, or other non-Claude slug": {
+    "theirs": "Omit `model` so the agent runs on the session model, and say so.",
+    "verdict": "different",
+    "jutsu": "In T3, a `t3:<providerInstanceId>/<model>` role runs on that provider through `delegate_task`; outside T3, the role's Claude default.",
+    "why": "T3 can delegate to Codex, Cursor, and other providers, which keeps review and arena panels cross-vendor; the session model would make them one vendor.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "t3:<providerInstanceId>/<modelId> @<effort>"
+  },
+  "Models | `auto` or `inherit-parent`": {
+    "theirs": "Omit `model`.",
+    "verdict": "same",
+    "jutsu": "`inherit`: omit `model` and `effort`.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "`inherit` \\(omit `model` and `effort`\\)"
+  },
+  "Models | The `pstack-models.mdc` rule, `~/.cursor/rules/pstack-models.mdc`": {
+    "theirs": "`~/.claude/rules/pstack-models.md`. Claude Code loads it into every new session, so its role lines are already in context. If they are not, read the file. If the file or the role's line is missing, use the skill's default slug.",
+    "verdict": "different",
+    "jutsu": "`rules/jutsu-models.md` in `${CLAUDE_CONFIG_DIR:-~/.claude}`, from context or the file; a repo `.claude/jutsu-models.md` wins.",
+    "why": "jutsu took this design from the adapter, with its own file name so the two plugins never read each other's format, a per-repo file, and `$CLAUDE_CONFIG_DIR` for T3's second Claude accounts.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "rules/jutsu-models\\.md"
+  },
+  "Models | A role value `<model> <effort>`, such as `opus high`": {
+    "theirs": "`model: \"opus\"` and `effort: \"high\"`.",
+    "verdict": "different",
+    "jutsu": "`<alias> @<effort>`, `inherit`, or `t3:<providerInstanceId>/<modelId> @<effort>`.",
+    "why": "The `@` form also carries T3 targets whose model ids contain spaces or slashes.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "A value is `<alias> @<effort>`"
+  },
+  "Paths | `.cursor/skills/`, `~/.cursor/skills/`": {
+    "theirs": "`.claude/skills/`, `~/.claude/skills/`",
+    "verdict": "same",
+    "jutsu": "`.claude/skills/` for project skills, `$CLAUDE_CONFIG_DIR/skills/` for personal ones.",
+    "where": "skills/create-verification-skill/SKILL.md",
+    "expect": "\\.claude/skills/verify/"
+  },
+  "Paths | `~/.cursor/plugins/`, `.cursor-plugin/plugin.json`": {
+    "theirs": "`~/.claude/plugins/`, `.claude-plugin/plugin.json`",
+    "verdict": "same",
+    "jutsu": "Claude Code's plugin dirs and `.claude-plugin/plugin.json`.",
+    "where": "skills/poteto-mode/references/runtime.md"
+  },
+  "Paths | `.cursor/rules/*.mdc`, always-applied rules": {
+    "theirs": "`CLAUDE.md`, or `AGENTS.md` when no `CLAUDE.md` exists. Claude Code never reads `.mdc` files. The model rule is the exception. See Models.",
+    "verdict": "same",
+    "jutsu": "The repo's `CLAUDE.md` and `AGENTS.md` files and rules.",
+    "where": "skills/poteto-mode/playbooks/autopilot-full.md",
+    "expect": "CLAUDE\\.md and AGENTS\\.md"
+  },
+  "Paths | `https://github.com/cursor/plugins/blob/main/pstack/<path>`": {
+    "theirs": "`<pstack>/<path>` when that file exists. The plugin ships the skills, `docs/guide/`, and `README.md`. Read the local copy and never fetch it. Give the user the URL when they need a link.",
+    "verdict": "different",
+    "jutsu": "Links point to jutsu's public copy on GitHub; the plugin does not ship upstream's `docs/` or `README.md`.",
+    "why": "jutsu excludes upstream's guide and README, which describe Cursor.",
+    "where": "skills/poteto-help/SKILL.md",
+    "expect": "github\\.com/sergchil/jutsu/blob/main/plugin/"
+  },
+  "Paths | Transcripts in `~/.cursor/projects/<slug>/agent-transcripts/`": {
+    "theirs": "`~/.claude/projects/<slug>/<session>.jsonl`. The slug is the workspace path with each `/` and `.` changed to `-`, so `/Users/you/proj` is `-Users-you-proj`. The newest `.jsonl` directly in that folder is the current session. Its `<session>/subagents/` folder holds subagent transcripts. Read only this workspace's folder.",
+    "verdict": "different",
+    "jutsu": "`${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<dir>/`, where every character other than a letter or digit becomes `-`, cut to 200 plus a hash; T3 threads via `t3_thread_list`.",
+    "why": "Claude Code replaces every non-alphanumeric character, not only `/` and `.`, so upstream's rule misses paths with `_` or spaces; and each T3 worktree thread has its own folder.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "every character other than a letter or digit replaced by `-`"
+  },
+  "Cursor-only features | Cursor Automations: routines, `update_state` routine calls, `api2.cursor.sh/automations` webhooks, routine wakes, and `SendToUser` secret requests": {
+    "theirs": "Skip with the line.",
+    "verdict": "different",
+    "jutsu": "Routines, wakes, and webhooks are `schedule_task` in T3 (`/loop` outside it); only Automations' own routine calls are skipped with the line.",
+    "why": "T3 has schedules and webhooks, so most of an Automation runs here.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "Cursor Automations' own routines"
+  },
+  "Cursor-only features | Bugbot": {
+    "theirs": "Bugbot comments on a GitHub PR are ordinary review threads, so triage them with the forge command that the step gives. Skip a step that starts, waits for, or configures Bugbot when the PR has no Bugbot check or comment.",
+    "verdict": "same",
+    "jutsu": "Any review bot's comments are review threads, triaged per `bugbot-triage.md`; starting or configuring Bugbot itself is skipped with the line.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "Any review bot"
+  },
+  "Cursor-only features | Cursor cloud agents": {
+    "theirs": "`environment: \"cloud\"` maps to a worktree, as in Subagent fields. Skip a step that needs the cloud agent itself, such as its dashboard status or its own machine.",
+    "verdict": "same",
+    "jutsu": "A worktree; the dashboard or machine of a Cursor-hosted worker is skipped with the line.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "Cursor-hosted worker"
+  },
+  "Cursor-only features | A built-in PR tool": {
+    "theirs": "Use the forge command that the step gives, such as `gh pr create`. That is not a skip, so write no line.",
+    "verdict": "same",
+    "jutsu": "`gh`, then T3's PR link tools; not a skip.",
+    "where": "skills/poteto-mode/references/runtime.md",
+    "expect": "Open with `gh`"
+  }
+}

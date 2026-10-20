@@ -14,7 +14,10 @@ These overrides carry fixes for upstream bugs. Their entries in `port/overrides.
 |---|---|---|
 | [#449](https://github.com/cursor/plugins/issues/449): untracked and ignored files are deleted | none open | `scripts/worktree-audit.sh`, `playbooks/worktree-cleanup.md` |
 | [#470](https://github.com/cursor/plugins/issues/470): closed-PR or unpushed work is called safe | [#492](https://github.com/cursor/plugins/pull/492) (open) | the same two files |
+| No CI: `watch-pr` never reaches a verdict on a repo without checks | [#510](https://github.com/cursor/plugins/pull/510) (open) | `scripts/watch-pr/github.ts`, `policy.ts`, `types.ts`, and their tests |
 | [#471](https://github.com/cursor/plugins/issues/471): only 100 review threads are read | [#484](https://github.com/cursor/plugins/pull/484), merged 2026-10-12. jutsu keeps only its two extra cursor guards: fail closed on a missing `endCursor`, and stop on a repeated one | `scripts/watch-pr/github.ts` and `github.test.ts` |
+
+Rechecked on 2026-10-20 against 0.15.29: #449, #470, #492, and #510 are still open, and 0.15.29 does not touch those files.
 
 `tests/test_worktree_audit.py` and `watch-pr/github.test.ts` pin the fixed behavior, and `tools/check.py` rejects `worktree remove --force` and `rm -rf` in any playbook, so an upstream change cannot bring a bug back silently.
 
@@ -32,6 +35,7 @@ For each override whose upstream file changed, the sync runs `git merge-file` wi
 - `merged into a copy of upstream`, or the build's `matches upstream; delete the override and its lock entry`: the override has nothing of ours left. Delete it, its lock entry, and its `overrides.json` entry.
 - `upstream removed its file`: delete the override, its lock entry, and its `overrides.json` entry.
 - `substitution <id> matched nothing`: upstream reworded text a rule rewrites. Update the rule's `pattern` in `port/subs/*.json`, or delete the rule.
+- `upstream's Claude Code adapter changed`: upstream's `docs/harness/claude-code.md` changed. For each listed row, decide whether jutsu should change or keeps its answer on purpose, then update `port/adapter.json`. `python3 tools/adapter_diff.py` passes when every row is reviewed.
 
 The lock is never refreshed by the sync. A merged override fails the build until a person relocks it, so a merge is never shipped unread. A new override needs an entry in `port/overrides.json` (`kind`, a one-sentence `why`, and the `upstream` issue or PR URL or `null`), or the build fails.
 
@@ -43,6 +47,7 @@ Then:
 python3 tools/build.py --relock <path>...  # record the new upstream hashes for the reviewed overrides
 python3 tools/build.py                     # regenerate plugin/
 python3 tools/check.py                     # 0 problems
+python3 tools/adapter_diff.py              # every row of upstream's Claude Code adapter reviewed
 python3 -m unittest discover -s tests      # all pass
 git add -A && git commit -m "Sync upstream pstack <version>"
 ```

@@ -24,8 +24,9 @@ Infer the need from the message and the conversation. A named situation, such as
 
 Check the state that changes the answer, and mention it only when it does:
 
-- No `.claude/jutsu-models.md` in the repo and no `jutsu-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`) means `/jutsu:setup-pstack` hasn't run for this user, so every role uses its default from [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles).
+- No `jutsu-models.md` in the Claude config dir's rules folder (`$CLAUDE_CONFIG_DIR/rules/`, else `~/.claude/rules/`) and no `.claude/jutsu-models.md` in the repo means `/jutsu:setup-pstack` hasn't run for this user, so every role uses its default from [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles).
 - No `verify` skill (`.claude/skills/verify/`, or an older `verify-*`), no `run-*` skill, and no other app harness in the project means agents have no scripted way to drive the app. Mention `/jutsu:create-verification-skill` when the question is about proving a change works.
+- No formal verification skill in the project means no property is checked past what tests reach. Mention `/jutsu:create-formal-verification-skill` when the question is about a race, an invariant, or another case tests rarely hit. When one exists and the code it covers changed after the commit it records as last in sync, mention `/jutsu:maintain-formal-verification-skill` if the question touches that code.
 
 When the models file is missing and it matters, ask whether the user wants to pick a model for each role and a reasoning budget now. It matters when the user is new, the question is about setup or cost, or the answer depends on which models run. Ask at most once per chat. If the need is also unclear, ask both questions in the same `AskUserQuestion` call. Offer two choices:
 
@@ -35,7 +36,7 @@ When the models file is missing and it matters, ask whether the user wants to pi
 ## Get set up
 
 1. Install jutsu per the [jutsu README](https://github.com/sergchil/jutsu#readme). It is a Claude Code plugin, and T3 Code runs the user's own `claude`, so one install serves both.
-2. Run [`/jutsu:setup-pstack`]({{plugin}}/skills/setup-pstack/SKILL.md). It asks for a reasoning budget, maps a model and effort to each role, and writes `jutsu-models.md`. In T3 it reads the live model catalog and can add any provider T3 can delegate to, such as Codex, Cursor, or a second Claude account. A non-Claude seat makes the review and arena panels cross-vendor. Without one they stay Claude-only, with weaker diversity. Each skill reads the file when it runs.
+2. Run [`/jutsu:setup-pstack`]({{plugin}}/skills/setup-pstack/SKILL.md). It asks for a reasoning budget, maps a model and effort to each role, and writes the role lines to `jutsu-models.md` in the Claude config dir's `rules/` folder, which Claude Code loads into each new session. In T3 it reads the live model catalog and can add any provider T3 can delegate to, such as Codex, Cursor, or a second Claude account. A non-Claude seat makes the review and arena panels cross-vendor. Without one they stay Claude-only, with weaker diversity. Then it offers once each to generate a verification skill and a formal verification skill for the project, unless the project already has one.
 3. Start a real task with `/jutsu`, a goal, and a check that can pass or fail.
 
 Installing changes nothing until the user types `/jutsu` or another jutsu skill. Most jutsu skills load only when the user types them. Three can also load on their own when the work matches. They are `tdd`, `typescript-best-practices`, and `benchmark-checklist`. The README has the details, including how to uninstall. Offer to word their first prompt with them, per [`references/prompting.md`](references/prompting.md).
@@ -43,6 +44,8 @@ Installing changes nothing until the user types `/jutsu` or another jutsu skill.
 If cost is the worry, say where the tokens go and how to spend fewer. jutsu spends extra tokens on subagents and review panels. Rerun `/jutsu:setup-pstack` and pick a smaller budget or cheaper models such as `sonnet` or `haiku`. A role set to `inherit` runs on the session's model and effort, which saves tokens when the session runs on a cheaper model or a lower effort. A shorter panel list runs fewer subagents, one for each entry. Save `/jutsu` for work that needs rigor.
 
 jutsu is pstack ported to Claude Code, built to run inside T3 Code. Plain Claude Code works too. Each step that needs a T3 tool names its fallback in [the runtime]({{plugin}}/skills/poteto-mode/references/runtime.md#host).
+
+Upstream pstack also installs in Claude Code (`pstack@cursor-plugins`) with its own [Claude Code adapter](https://github.com/cursor/plugins/blob/main/pstack/docs/harness/claude-code.md). Enable one of the two, not both. [jutsu's comparison](https://github.com/sergchil/jutsu/blob/main/docs/COMPARISON.md) says how they differ. In both, a step that needs a Cursor-only feature with no counterpart is skipped with one `Skipped in Claude Code:` line.
 
 In T3, jutsu uses T3's own tools where Claude Code has none. `watch_pull_request` and `schedule_task` wake it on PR events and timed ticks. `t3_thread_launch` gives a long-lived PR owner its own thread and worktree. `delegate_task` runs a role on another provider or Claude account. `preview_*` drives web UIs, `device_*` drives simulators, `html_render` publishes visual reports, and `t3_thread_list`, `t3_thread_read`, and `t3_thread_search` read past threads. [The runtime]({{plugin}}/skills/poteto-mode/references/runtime.md) maps each one and its fallback.
 
@@ -67,11 +70,12 @@ The default answer is `/jutsu`, which runs most of the others when its steps nee
 |---|---|
 | Do any non-trivial task with rigor | [`/jutsu`]({{plugin}}/skills/poteto-mode/SKILL.md) |
 | Check that the agent understood their goal and the problem before it starts | [`/jutsu:in-your-own-words`]({{plugin}}/skills/in-your-own-words/SKILL.md) |
+| Get a prompt rewritten deeper, not bigger, before sending it: what a top professional would add, their raw material and methods, and an outside check. It returns the prompt and doesn't do the task | [`/jutsu:sharpen`]({{plugin}}/skills/sharpen/SKILL.md) |
 | Know how code works now, or where new code should live | [`/jutsu:how`]({{plugin}}/skills/how/SKILL.md) |
 | Know why code is shaped this way, or where a number came from | [`/jutsu:why`]({{plugin}}/skills/why/SKILL.md) |
 | Understand a change or subsystem, explained plainly | [`/jutsu:teach`]({{plugin}}/skills/teach/SKILL.md) |
 | Catch up on their own recent work on a topic | [`/jutsu:recall`]({{plugin}}/skills/recall/SKILL.md) |
-| Catch up on what changed in this chat since their last message, in a few plain sentences and small visuals, with enough context to decide each action item | [`/jutsu:ketchup`]({{plugin}}/skills/ketchup/SKILL.md) |
+| Catch up on what changed in this chat since their last message, in plain words and small visuals, with every item waiting on them listed and decidable from the reply alone | [`/jutsu:ketchup`]({{plugin}}/skills/ketchup/SKILL.md) |
 | Know what a small diff could break outside itself | [`/jutsu:blast-radius`]({{plugin}}/skills/blast-radius/SKILL.md) |
 | Settle types and module shape before code that crosses a function boundary | [`/jutsu:architect`]({{plugin}}/skills/architect/SKILL.md) |
 | Get several attempts at one brief, merged into the best one | [`/jutsu:arena`]({{plugin}}/skills/arena/SKILL.md) |
@@ -85,6 +89,8 @@ The default answer is `/jutsu`, which runs most of the others when its steps nee
 | Hear the last reply again in plain words | [`/jutsu:bro`]({{plugin}}/skills/bro/SKILL.md) |
 | Give agents a scripted way to drive the app and prove behavior, as the project's `verify` skill | [`/jutsu:create-verification-skill`]({{plugin}}/skills/create-verification-skill/SKILL.md) |
 | Bring a verification skill and its feature map back in line with the app | [`/jutsu:maintain-verification-skill`]({{plugin}}/skills/maintain-verification-skill/SKILL.md) |
+| Formally verify a race, invariant, or other property that tests rarely reach | [`/jutsu:create-formal-verification-skill`]({{plugin}}/skills/create-formal-verification-skill/SKILL.md) |
+| Bring a formal verification back in line after the code it covers changed, and learn whether a failure is drift or a bug | [`/jutsu:maintain-formal-verification-skill`]({{plugin}}/skills/maintain-formal-verification-skill/SKILL.md) |
 | Vet a performance number before reporting or acting on it | [`/jutsu:benchmark-checklist`]({{plugin}}/skills/benchmark-checklist/SKILL.md) |
 | Run a large or cross-cutting change, or one to review after stepping away | [`/jutsu:figure-it-out`]({{plugin}}/skills/figure-it-out/SKILL.md) |
 | Keep a decision log during a run, and review it afterward | [`/jutsu:show-me-your-work`]({{plugin}}/skills/show-me-your-work/SKILL.md) |
@@ -131,9 +137,9 @@ Principles are one-rule files in `{{plugin}}/principles/` that `/jutsu` reads an
 | Symptom | Fix |
 |---|---|
 | The mode stopped applying after a few turns | It is a new session, or `/jutsu off` ran, or the task was started without `/jutsu` at the start of a message. Start the task with `/jutsu`. If the turn reminder never appears, check that jutsu is enabled with `claude plugin list`. |
-| Every turn shows two routers or two reminders | Another pstack plugin is enabled next to jutsu, such as `pstack@pstack-claude`. Disable it with `claude plugin disable pstack@pstack-claude`, once in each Claude config dir that T3 or the user runs. |
+| Every turn shows two routers or two reminders | Another pstack plugin is enabled next to jutsu, such as upstream's `pstack@cursor-plugins` or `pstack@pstack-claude`. Disable it with `claude plugin disable <id>`, once in each Claude config dir that T3 or the user runs. |
 | A question got treated as the next step of the last task | Say "new task", or say the turn doesn't need the mode. |
-| A new model choice had no effect | A repo `.claude/jutsu-models.md` wins over the one in the Claude config dir, so check which one the run read. Each skill reads the file when it runs, so rerun the skill, or say "reread jutsu-models.md". |
+| A new model choice had no effect | A repo `.claude/jutsu-models.md` wins over `rules/jutsu-models.md` in the Claude config dir, so check which one the run read. Claude Code loads the rules file when a session starts, so a session that was open when `/jutsu:setup-pstack` ran still holds the old lines. Start a new session, or say "reread jutsu-models.md". A session under another `CLAUDE_CONFIG_DIR`, such as a second Claude account in T3, reads that dir's file. |
 | Runs cost more than expected | See the cost paragraph under Get set up. |
 | A skill didn't load on its own | Most jutsu skills are user-invoked. They load when the user types `/jutsu:<skill>`, or when `/jutsu` reads the file, and `/jutsu` doesn't run every skill. Only `tdd`, `typescript-best-practices`, and `benchmark-checklist` load on their own. |
 | `$jutsu:<skill>` from T3's picker did nothing | T3 sends it as plain text. Type `/jutsu:<skill>` instead. `$jutsu` alone works. |

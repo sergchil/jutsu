@@ -154,6 +154,25 @@ class SyncMergeTest(SyncFixture):
         self.assertEqual(tree_hashes(self.repo), before)
         self.assertFalse((self.tmp / "summary.md").exists())
 
+    def test_dotfiles_are_not_overrides_or_upstream_files(self):
+        new = self.upstream_update()
+        for d in ("vendor/pstack", "vendor/pstack/skills/how", "port/overrides", "port/overrides/skills/how"):
+            (self.repo / d / ".DS_Store").write_bytes(b"\x00\x00\x00\x01Bud1\x00")
+        out = self.sync("--ref", new, "--dry-run").stdout
+        self.assertNotIn(".DS_Store", out)
+        self.assertIn(f"merged cleanly, review then relock: port/overrides/{HOW}", out)
+
+    def test_an_adapter_change_is_listed(self):
+        adapter = self.up / "pstack/docs/harness/claude-code.md"
+        text = adapter.read_text()
+        self.assertIn("| `Task` | `Agent` |", text)
+        adapter.write_text(text.replace("| `Task` | `Agent` |", "| `Task` | `Agent`, always in the foreground |"))
+        git("add", "-A", cwd=self.up)
+        git("commit", "--quiet", "-m", "upstream: adapter", cwd=self.up)
+        out = self.sync("--ref", git("rev-parse", "HEAD", cwd=self.up), "--dry-run").stdout
+        self.assertIn("upstream's Claude Code adapter changed (docs/harness/claude-code.md)", out)
+        self.assertIn("adapter row changed, re-review it and update port/adapter.json: Tools | `Task`", out)
+
     def test_no_merge_when_the_old_vendor_file_does_not_match_the_lock(self):
         new = self.upstream_update()
         lock_path = self.repo / "port/overrides.lock.json"

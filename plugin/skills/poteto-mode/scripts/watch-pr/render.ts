@@ -112,7 +112,11 @@ function renderBlocker(blocker: T.MergeBlocker | StatusQueryBlocker): string {
             ? "mark the PR ready for review before waiting for the merge queue"
             : blocker.reason === "behind-base"
               ? "rebase onto the current base, push, and rerun the watcher"
-              : "resolve the changes-requested review before waiting for the merge queue";
+              : blocker.reason === "review-required"
+                ? "get the required approving review"
+                : blocker.reason === "merge-blocked"
+                  ? "find the branch protection rule holding the merge (mergeStateStatus=BLOCKED with clean CI)"
+                  : "resolve the changes-requested review before waiting for the merge queue";
       return [
         `BLOCKER: ${blocker.reason}`,
         `pr=${blocker.pr.number}`,

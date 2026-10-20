@@ -2,6 +2,16 @@
 
 Notable changes to jutsu. Versions follow the plugin version in `plugin/.claude-plugin/plugin.json`.
 
+## 0.3.0 (2026-10-20)
+
+- Tracks pstack 0.15.29. New skills `/jutsu:sharpen`, `/jutsu:create-formal-verification-skill`, and `/jutsu:maintain-formal-verification-skill`, now 31 skills. `/jutsu:setup-pstack` also offers a formal verification skill. `/jutsu:ketchup` lists every call waiting on you, and the autopilots catch you up with it. A formal verification skill goes to `.claude/skills/<name>/` and never takes the name `verify`.
+- `/jutsu:setup-pstack` writes `jutsu-models.md` to the `rules/` folder of the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). Claude Code loads it into each new session, so role lines are in context. A repo `.claude/jutsu-models.md` still wins, and the 0.2 file still counts until setup runs again. `./uninstall.sh` removes both.
+- A step that needs a Cursor-only feature with no T3 or Claude Code counterpart writes `Skipped in Claude Code: <step>. <reason>.` and goes on. Schedules, webhooks, and PR watching are not skips.
+- Both ideas come from upstream's own Claude Code adapter ([#637](https://github.com/cursor/plugins/pull/637), [#705](https://github.com/cursor/plugins/pull/705)). `tools/adapter_diff.py` checks each of its rows against jutsu, the sync lists a changed row, and [docs/COMPARISON.md](docs/COMPARISON.md) lists the deliberate differences. The check found that `SendMessage` resumes a finished subagent, now in the runtime.
+- `watch-pr` no longer says READY when a required review is missing, or when GitHub reports BLOCKED with clean CI (another branch rule, such as signed commits). BLOCKED while required checks still run stays a wait. Taken from [pstack-claude](https://github.com/michael-denyer/pstack-claude).
+- The build and sync skip dotfiles such as `.DS_Store`, which were read as overrides and upstream files.
+- [#449](https://github.com/cursor/plugins/issues/449), [#470](https://github.com/cursor/plugins/issues/470), and [PR #510](https://github.com/cursor/plugins/pull/510) are still open upstream on 2026-10-20, and 0.15.29 does not touch those files. jutsu keeps its fixes.
+
 ## 0.2.0 (2026-10-14)
 
 - Tracks pstack 0.15.23. New skill `/jutsu:in-your-own-words`, and per-job subagent effort from upstream. Now 23 playbooks, 24 principles, and 28 skills as `/jutsu:<skill>` commands.

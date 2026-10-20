@@ -48,7 +48,7 @@ class BuildTest(unittest.TestCase):
     def test_vendor_is_untouched_upstream(self):
         vendor = ROOT / "vendor" / "pstack"
         self.assertTrue((vendor / ".cursor-plugin" / "plugin.json").exists())
-        self.assertTrue((vendor / "skills" / "poteto-mode" / "SKILL.md").read_text().startswith("---\nname: Poteto Mode"))
+        self.assertTrue((vendor / "skills" / "poteto-mode" / "SKILL.md").read_text().startswith("---\nname: poteto-mode\n"))
 
     def test_plugin_token_resolves_relative_to_each_file(self):
         self.assertEqual(build.resolve_plugin_token("SKILL.md", "{{plugin}}/x"), "./x")
@@ -306,6 +306,30 @@ class OverrideRulesTest(unittest.TestCase):
                            "skills/teach/SKILL.md: why must be one short sentence",
                            "skills/teach/SKILL.md: upstream must be an issue or PR URL, or null"):
                 self.assertIn(needle, r.stderr)
+
+
+class JunkFileTest(unittest.TestCase):
+    """Finder's .DS_Store and other dotfiles are never read as overrides, added files, or upstream files."""
+
+    def test_dotfiles_are_skipped_by_build_and_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = copy_repo(tmp)
+            junk = b"\x00\x00\x00\x01Bud1\x00"
+            for d in ("port/overrides", "port/overrides/skills/how", "port/added", "port/added/hooks",
+                      "vendor/pstack", "vendor/pstack/skills/teach"):
+                (repo / d / ".DS_Store").write_bytes(junk)
+            (repo / "port/overrides/skills/how/._SKILL.md").write_bytes(junk)
+            r = build_copy(repo)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            out = repo.parent / "out"
+            dotfiles = [p for p in out.rglob(".*") if p.is_file()]
+            self.assertEqual(dotfiles, [])
+            self.assertTrue((out / ".claude-plugin" / "plugin.json").is_file())
+            shutil.copytree(out, repo / "plugin")
+            (repo / "plugin/skills/.DS_Store").write_bytes(junk)
+            r = subprocess.run([sys.executable, str(repo / "tools/build.py"), "--check"],
+                               capture_output=True, text=True, timeout=120)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
 class UpstreamUpdateTest(unittest.TestCase):

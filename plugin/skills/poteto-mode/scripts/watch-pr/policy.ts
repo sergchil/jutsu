@@ -255,7 +255,17 @@ function gateReason(
     return "changes-requested";
   // GitHub says BEHIND when the base requires an up-to-date branch and this
   // head is not. The merge would be refused, so the PR is not ready.
-  return row.facts.mergeStateStatus === "BEHIND" ? "behind-base" : null;
+  if (row.facts.mergeStateStatus === "BEHIND") return "behind-base";
+  if (row.facts.reviewDecision === "REVIEW_REQUIRED") return "review-required";
+  // BLOCKED with clean CI is some other branch protection rule, such as signed
+  // commits or a required check that never reported. GitHub will not merge it.
+  // From michael-denyer/pstack-claude watch-pr/policy.ts.
+  // GitHub also says BLOCKED while required checks still run; that is a wait.
+  return row.facts.mergeStateStatus === "BLOCKED" &&
+    row.kind === "open" &&
+    row.ci.kind === "ci-clean"
+    ? "merge-blocked"
+    : null;
 }
 function gateBlocker(
   row: T.PrSnapshot,

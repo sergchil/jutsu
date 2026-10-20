@@ -29,6 +29,11 @@
     "upstream": null,
     "why": "Uses Claude Code skill dirs, Claude transcripts, and AskUserQuestion limits instead of Cursor's create-skill, .cursor paths, and AskQuestion."
   },
+  "skills/create-formal-verification-skill/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "The generated skill goes to .claude/skills/<name>/, is committed for T3 worktree threads, and never takes the name verify, which the app verification skill owns."
+  },
   "skills/create-verification-skill/SKILL.md": {
     "kind": "runtime",
     "upstream": null,
@@ -52,7 +57,7 @@
   "skills/ketchup/SKILL.md": {
     "kind": "runtime",
     "upstream": null,
-    "why": "T3 renders Mermaid and tables, and a read-only catch-up cannot take screenshots, so visuals use those and no placeholder box."
+    "why": "T3 renders Mermaid, tables, and Markdown images, so visuals use those, and a read-only catch-up embeds existing screenshots but never captures one."
   },
   "skills/maintain-verification-skill/SKILL.md": {
     "kind": "runtime",
@@ -67,7 +72,7 @@
   "skills/poteto-help/SKILL.md": {
     "kind": "naming",
     "upstream": null,
-    "why": "Rewritten for jutsu: /jutsu commands, AskUserQuestion, and jutsu's own pages instead of Cursor's guide."
+    "why": "Rewritten for jutsu: /jutsu commands, AskUserQuestion, and jutsu's own pages, and drops Cursor's install steps and the excluded make-bot-ui row."
   },
   "skills/poteto-help/references/prompting.md": {
     "kind": "runtime",
@@ -217,22 +222,22 @@
   "skills/poteto-mode/scripts/watch-pr/policy.test.ts": {
     "kind": "upstream-bug",
     "upstream": "https://github.com/cursor/plugins/pull/510",
-    "why": "Pins the no-CI verdict on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+    "why": "Pins the no-CI verdict on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base; also blocks READY on a missing required review or a BLOCKED merge with clean CI (from pstack-claude)."
   },
   "skills/poteto-mode/scripts/watch-pr/policy.ts": {
     "kind": "upstream-bug",
     "upstream": "https://github.com/cursor/plugins/pull/510",
-    "why": "Confirms no CI over every PR commit, so watch-pr settles on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+    "why": "Confirms no CI over every PR commit, so watch-pr settles on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base; also blocks READY on a missing required review or a BLOCKED merge with clean CI (from pstack-claude)."
   },
   "skills/poteto-mode/scripts/watch-pr/render.ts": {
     "kind": "upstream-bug",
     "upstream": null,
-    "why": "Prints the action for the new behind-base blocker, so a PR behind a base that requires an up-to-date head is never READY."
+    "why": "Prints the action for the new behind-base blocker, so a PR behind a base that requires an up-to-date head is never READY; also blocks READY on a missing required review or a BLOCKED merge with clean CI (from pstack-claude)."
   },
   "skills/poteto-mode/scripts/watch-pr/types.ts": {
     "kind": "upstream-bug",
     "upstream": "https://github.com/cursor/plugins/pull/510",
-    "why": "Allows an empty check list, which the no-CI verdict needs (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+    "why": "Allows an empty check list, which the no-CI verdict needs (#510); also blocks READY when GitHub reports the branch BEHIND its base; also blocks READY on a missing required review or a BLOCKED merge with clean CI (from pstack-claude)."
   },
   "skills/poteto-mode/scripts/worktree-audit.sh": {
     "kind": "upstream-bug",
@@ -252,7 +257,7 @@
   "skills/setup-pstack/SKILL.md": {
     "kind": "runtime",
     "upstream": null,
-    "why": "Writes jutsu-models.md with Agent aliases and effort levels, and reads T3's orchestrator_capabilities, instead of a Cursor rule."
+    "why": "Writes jutsu-models.md to the Claude config dir's rules/ folder with Agent aliases and effort levels, and reads T3's orchestrator_capabilities, instead of a Cursor rule."
   },
   "skills/show-me-your-work/SKILL.md": {
     "kind": "runtime",

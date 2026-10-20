@@ -9,7 +9,7 @@
 
 **jutsu** is [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan (poteto), ported to **Claude Code inside [T3 Code](https://github.com/pingdotgg/t3code)**.
 
-One command, `/jutsu`, turns on poteto mode. It routes each task to one of pstack 0.15.23's 23 playbooks (bug fix, feature, refactor, babysit a PR, overnight run…), applies its 24 principles, and proves the work before it calls it done. In T3 it uses T3's own tools: parallel threads in their own worktrees, PR watching, schedules, the browser, and simulators.
+One command, `/jutsu`, turns on poteto mode. It routes each task to one of pstack 0.15.29's 23 playbooks (bug fix, feature, refactor, babysit a PR, overnight run…), applies its 24 principles, and proves the work before it calls it done. In T3 it uses T3's own tools: parallel threads in their own worktrees, PR watching, schedules, the browser, and simulators.
 
 ![$jutsu in T3's skill picker](docs/images/picker.jpg)
 

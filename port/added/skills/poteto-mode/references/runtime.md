@@ -20,6 +20,12 @@ Playbooks keep a few of upstream's words. Read them this way.
 | `scripts/watch-pr` polling | `watch_pull_request` to wake, `watch-pr --status-only` to judge. See [Pull requests](#pull-requests). |
 | Bugbot, agentic security review | Any review bot. Triage per `bugbot-triage.md`. |
 
+## Cursor-only steps
+
+When a step needs a Cursor feature that has no counterpart in T3 or Claude Code, write exactly `Skipped in Claude Code: <step>. <reason>.` in your reply and go on to the next step. Do not stop, ask, or retry. When a later step needs what the skipped step made, such as a URL or a key, leave a placeholder and name it in the line. The line comes from upstream's own Claude Code adapter (`docs/harness/claude-code.md`, cursor/plugins#637).
+
+Skip only when nothing here does the job. These are not skips: a schedule, tick, or webhook (`schedule_task`, [Waking](#waking)), PR watching (`watch_pull_request`, [Pull requests](#pull-requests)), a cloud worker (a worktree, [Isolation](#isolation)), Bugbot comments (review threads, triaged per `bugbot-triage.md`), and opening a PR (`gh`). What is left: Cursor Automations' own routines and `update_state` calls, the dashboard or machine of a Cursor-hosted worker, and starting or configuring Bugbot itself.
+
 ## Subagents
 
 **Default: the native `Agent` tool** for a child that only reads, or that writes where no other writer can overlap. Every Claude model and effort level is reachable natively, so such a Claude child is an `Agent` call. T3 shows each one as a child thread.
@@ -28,7 +34,7 @@ Playbooks keep a few of upstream's words. Read them this way.
 - `model`: an alias only: `opus`, `sonnet`, `fable`, or `haiku`. The tool rejects full model ids.
 - `effort`: `low`, `medium`, `high`, `xhigh`, or `max`. Pick it for the job and pass it on every call that has a role. Without it the child inherits the session effort. There is no per-child speed setting.
 - `run_in_background`: true unless you need the result before your next step.
-- `name`: set it for any child you may message or stop. `SendMessage` continues a live child.
+- `name`: set it for any child you may message or stop. `SendMessage` to its name or id resumes a child, live or finished, with its full history, so continue one that way instead of spawning a new one with pasted results. `Explore` children are one-shot and cannot be resumed ([sub-agents docs](https://code.claude.com/docs/en/sub-agents#resume-subagents), read 2026-10-20).
 - **Brief.** A child gets only its brief. Open every `jutsu:poteto-agent` brief with the absolute path of the router (`skills/poteto-mode/SKILL.md`, which you know because you read it) and the line `Read it in full before any work.` Then the goal, file pointers instead of pasted context, constraints, and the report format. Never put `$(...)` or backticks that a shell would expand into a brief that a child will paste into a command. Tell every child to run each command in the foreground and never end its turn with a background shell or agent still running, since a Claude child that does can report early. A deadline orders the work; it never waives a step.
 - **zsh.** T3 runs commands in the user's shell, often zsh. zsh expands a word that starts with `=`, so `echo =====` fails and the rest of a chained command never runs. Quote a separator (`echo '====='`). Tell every child the same. Source: pmwoz/t3-pstack PR #1. Probed 2026-10-14 on zsh 5.9.
 - **Router path from the hook.** When poteto mode is on, the mode hook gives each new `jutsu:poteto-agent` child the router path (`SubagentStart`). Other types get nothing, so the brief still opens with the router path. Probed 2026-10-14 on Claude Code 2.1.296 with `claude -p`; inside T3 Not checked.
@@ -58,7 +64,13 @@ Rules for `delegate_task` beyond T3's own:
 
 ## Roles
 
-Role defaults. A role line in `jutsu-models.md` overrides one. Look for `.claude/jutsu-models.md` in the repo, then `jutsu-models.md` in the Claude config dir (`$CLAUDE_CONFIG_DIR`, else `~/.claude`). `/jutsu:setup-pstack` writes it.
+Role defaults. A role line in `jutsu-models.md` overrides one. `/jutsu:setup-pstack` writes it. Find the lines in this order:
+
+1. `.claude/jutsu-models.md` in the repo. When it exists, read it. Its lines win.
+2. `rules/jutsu-models.md` in the Claude config dir (`${CLAUDE_CONFIG_DIR:-~/.claude}/rules/`). Claude Code loads every `.md` file in that folder into each new session ([memory docs](https://code.claude.com/docs/en/memory#user-level-rules), read 2026-10-20), so its role lines are usually already in your context. When they are not, or setup ran after this session started, read the file. Claude Code 2.1.304's bundle builds this folder from the same config dir as the user `CLAUDE.md`, so a set `CLAUDE_CONFIG_DIR` moves it (read in the bundle, not run).
+3. `jutsu-models.md` directly in the config dir, where jutsu 0.2 wrote it.
+
+Ignore `pstack-models.md`. Upstream pstack's own Claude Code adapter writes it in another format.
 
 - feature, refactoring: `opus @xhigh`
 - bug-fix: `fable @xhigh`

@@ -2,6 +2,18 @@
 
 Each result was read from the Claude transcript, git, GitHub, or a screenshot, not from the agent's own summary.
 
+## 0.3.0 (2026-10-20)
+
+Automated only. Not run live in Claude Code or the T3 app.
+
+| Suite | Result |
+|---|---|
+| `python3 -m unittest discover -s tests` | 143 pass, including the adapter cross-check, dotfile skipping in build and sync, and the models file under `rules/` |
+| `bun test --timeout 30000` in `poteto-mode/scripts`, on a clean copy | 93 pass |
+| `python3 tools/build.py --check`, `python3 tools/check.py`, `python3 tools/adapter_diff.py` | clean |
+
+Not checked: that a session started with `CLAUDE_CONFIG_DIR` set loads `rules/` from that dir (read in Claude Code 2.1.304's bundle, not run), whether subagents get user rules in context, and T3 rendering an embedded screenshot in a `/jutsu:ketchup` reply.
+
 ## 0.2.0 (2026-10-14)
 
 **Headless, not in the T3 app.** Claude Code 2.1.296 on macOS, run headless with stream-json output, the mode T3 uses to drive Claude, with jutsu linked at `~/.claude/skills/jutsu`. 0.2.0 has not been rerun in the T3 desktop app yet.

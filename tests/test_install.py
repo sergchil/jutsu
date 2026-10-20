@@ -142,6 +142,9 @@ class InstallTest(unittest.TestCase):
     def test_uninstall_script_removes_everything_jutsu_added(self):
         self.run_install()
         (self.default / "jutsu-models.md").write_text("feature, refactoring: opus @xhigh\n")
+        (self.default / "rules").mkdir()
+        (self.default / "rules" / "jutsu-models.md").write_text("feature, refactoring: opus @xhigh\n")
+        (self.default / "rules" / "mine.md").write_text("keep\n")
         data = self.default / "plugins" / "data" / "jutsu-skills-dir" / "sessions"
         data.mkdir(parents=True)
         (data / "abc").write_text("on\n")
@@ -153,6 +156,8 @@ class InstallTest(unittest.TestCase):
         for d in (self.default, self.work, self.envdir):
             self.assertFalse(self.link(d).is_symlink(), d)
         self.assertFalse((self.default / "jutsu-models.md").exists())
+        self.assertFalse((self.default / "rules" / "jutsu-models.md").exists())
+        self.assertTrue((self.default / "rules" / "mine.md").exists())
         self.assertFalse((self.default / "plugins" / "data" / "jutsu-skills-dir").exists())
         self.assertTrue((self.default / "skills" / "keep-me").is_dir())
         self.assertEqual((self.default / "settings.json").read_text(), "{}")
@@ -176,8 +181,12 @@ class InstallTest(unittest.TestCase):
         (self.default / "skills" / "keep-me").mkdir()
         data = self.default / "plugins" / "data" / "jutsu-skills-dir"
         data.mkdir(parents=True)
+        (self.default / "rules").mkdir()
+        (self.default / "rules" / "jutsu-models.md").write_text("x\n")
         r = self.run_install("--uninstall")
         self.assertEqual(r.returncode, 0)
+        self.assertIn("Claude Code still loads it into every session", r.stdout)
+        self.assertTrue((self.default / "rules" / "jutsu-models.md").exists())
         for d in (self.default, self.work, self.envdir):
             self.assertFalse(self.link(d).exists() or self.link(d).is_symlink())
         self.assertTrue((self.default / "skills" / "keep-me").is_dir())

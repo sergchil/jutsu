@@ -686,3 +686,46 @@ describe("a PR with no checks configured", () => {
     });
   });
 });
+
+it("never reports READY when a required review is missing or GitHub blocks the merge", async () => {
+  const cases = [
+    [{ reviewDecision: "REVIEW_REQUIRED" }, "review-required", "approving review"],
+    [{ mergeStateStatus: "BLOCKED" }, "merge-blocked", "branch protection"],
+  ] as const;
+  for (const [facts, reason, action] of cases) {
+    const row = await readSnapshot({
+      reader: fakeReader({ facts }),
+      context: context(21),
+      pendingHistory: "omit",
+      allowDraft: false,
+    });
+    const decision = classifyPr(row);
+    expect(decision).toMatchObject({ kind: "blocker", blocker: { kind: "merge-gate", reason } });
+    if (decision.kind !== "blocker") throw new Error("expected a blocker");
+    const text = renderPretty({
+      schemaVersion: 1,
+      sequence: 1,
+      observedAt: "2026-01-01T00:00:00Z",
+      mode: "single",
+      kind: "BLOCKER",
+      terminal: true,
+      exitCode: 6,
+      blocker: decision.blocker,
+    } as Parameters<typeof renderPretty>[0]);
+    expect(text).toContain(`BLOCKER: ${reason}`);
+    expect(text).toContain(action);
+  }
+});
+
+it("waits, not blocks, while GitHub says BLOCKED because required checks still run", async () => {
+  const row = await readSnapshot({
+    reader: fakeReader({
+      facts: { mergeStateStatus: "BLOCKED" },
+      fastPath: { kind: "checks", checks: [pendingCheck()] },
+    }),
+    context: context(22),
+    pendingHistory: "omit",
+    allowDraft: false,
+  });
+  expect(classifyPr(row).kind).toBe("waiting");
+});
