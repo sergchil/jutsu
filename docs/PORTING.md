@@ -9,6 +9,8 @@ How jutsu turns upstream pstack (Cursor) into a Claude Code plugin that runs wel
 - `port/subs/*.json` hold mechanical rewrites for files that need only small changes. Every rule must match at least once, or the build fails.
 - `port/overrides/<plugin path>` replaces a whole file. `port/overrides.lock.json` pins the upstream file each override was merged against. When upstream changes, `tools/sync_upstream.py` 3-way merges the override, and the build fails until a person reviews it and `tools/build.py --relock <path>` runs.
 - `port/overrides.json` gives each override a reason: `kind` (`runtime`, `upstream-bug`, `lesson`, `naming`, or `other`), a one-sentence `why`, and the `upstream` issue or PR URL or `null`. The build fails on an override without an entry, an entry without an override, and an override that matches upstream.
+- `port/adapter.json` records how jutsu answers each row of upstream's own Claude Code adapter (`vendor/pstack/docs/harness/claude-code.md`, not shipped). `tools/adapter_diff.py` checks it.
+- Dotfiles such as `.DS_Store` are never overrides, added files, or upstream files. The build and sync skip them.
 - `port/added/<plugin path>` holds files upstream does not have (the runtime, hooks, the `/jutsu` alias, the manifest).
 - `plugin/` is generated. Never edit it by hand.
 
@@ -22,7 +24,7 @@ How jutsu turns upstream pstack (Cursor) into a Claude Code plugin that runs wel
 2. **Mechanisms come from the runtime.** Name the exact tool and parameters the runtime names. Link the runtime section instead of repeating it: from a playbook, `../references/runtime.md#subagents`; from anywhere else, `{{plugin}}/skills/poteto-mode/references/runtime.md#subagents`. When a step needs a T3-only tool, say what to do without it in the same step or link the runtime row that says it.
 3. **Skills and principles are files.** A jutsu skill has `disable-model-invocation: true`, so it is not in the model's skill list, unless `port/spec.json` lists it in `model_invocable` (today `tdd`, `benchmark-checklist`, and `typescript-best-practices`: cheap, no fan-out, no writes, and their trigger is real). A model-invocable skill keeps upstream's "Use when" description. A slash-only one says what it does and how to run it (`tools/check.py` enforces both). On the first mention of another skill in a file, give its path: the **how** skill (`{{plugin}}/skills/how/SKILL.md`). Principles: `{{plugin}}/principles/principle-<name>.md`. The build replaces `{{plugin}}` with the relative path from the file to the plugin root. Do not use `{{plugin}}` in `agents/*.md`.
 4. **Subagents.** Cursor `Task` becomes the `Agent` tool: `subagent_type`, `model` (alias `opus`, `sonnet`, `fable`, `haiku` only), `effort` (`low` to `max`), `run_in_background`. Models come from the role names in the runtime's Roles section. Cursor's slug-fallback rules (the Task error's valid-slug list) are dropped. A `readonly: true` child becomes a read-only brief, plus `subagent_type: "Explore"` when it only reads code. Cursor's "readonly strips MCP" caveat is dropped.
-5. **Names.** `/poteto-mode` becomes `/jutsu`. Other skills become `/jutsu:<name>`. `poteto-agent` becomes `jutsu:poteto-agent`. `Comment Sicko` becomes `jutsu:comment-sicko`. The models file is `jutsu-models.md`, written by `/jutsu:setup-pstack`. Generated project skills go to `.claude/skills/`, personal ones to `$CLAUDE_CONFIG_DIR/skills/` (default `~/.claude/skills/`).
+5. **Names.** `/poteto-mode` becomes `/jutsu`. Other skills become `/jutsu:<name>`. `poteto-agent` becomes `jutsu:poteto-agent`. `Comment Sicko` becomes `jutsu:comment-sicko`. The models file is `rules/jutsu-models.md` in the Claude config dir, written by `/jutsu:setup-pstack`. A repo `.claude/jutsu-models.md` wins over it. Generated project skills go to `.claude/skills/`, personal ones to `$CLAUDE_CONFIG_DIR/skills/` (default `~/.claude/skills/`).
 6. **Style.** Upstream's prose rules: short declarative sentences, no long dash, no colon as a mid-sentence connector, no fabricated links.
 
 ## Lessons to encode
@@ -74,7 +76,10 @@ Each one comes from a real run of a port, or from T3's source. Put each where it
 43. A read-only sandbox, not plan mode, is what limits T3's pre-approved tools to the read-only ones.
 44. A review guide (`write_pull_request_guides`) explains a PR. It never replaces a verdict.
 45. In T3 each worktree thread writes its transcripts under its own `projects/<dir>/`, so "this workspace's transcripts" covers about one thread. Use `t3_thread_list` and `t3_thread_read` for the rest.
+46. Claude Code loads every `.md` file in the config dir's `rules/` folder into each new session ([memory docs](https://code.claude.com/docs/en/memory#user-level-rules)). The models file lives there, so role lines are in context. A skill reads the file when they are not, or when setup ran after the session started. The file keeps jutsu's own name, since upstream's adapter writes `pstack-models.md` in another format.
+47. A step that needs a Cursor-only feature with no T3 or Claude Code counterpart writes exactly `Skipped in Claude Code: <step>. <reason>.` and goes on (upstream's adapter). Schedules, webhooks, PR watching, cloud workers, and Bugbot comments have counterparts here, so they are never skipped.
+48. When upstream's Claude Code adapter disagrees with jutsu, record why in `port/adapter.json`. Fix jutsu only when the row shows a real gap, as with `SendMessage` resuming a finished subagent.
 
 ## Tests
 
-`python3 -m unittest discover -s tests` and `python3 tools/build.py --check`.
+`python3 -m unittest discover -s tests`, `python3 tools/build.py --check`, and `python3 tools/adapter_diff.py`.
