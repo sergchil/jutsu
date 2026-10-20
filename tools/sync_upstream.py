@@ -186,7 +186,23 @@ def web_base(repository: str) -> str:
     return f"https://github.com/{m.group(1)}" if m else WEB
 
 
-def summary_markdown(meta: dict, commit: str, version: str, commits, items: list[dict]) -> str:
+ADAPTER = "docs/harness/claude-code.md"
+
+
+def adapter_report(fresh: Path, touched: list[str]) -> list[str]:
+    """When upstream's Claude Code adapter changed, each row that now disagrees with port/adapter.json."""
+    if ADAPTER not in touched or not (fresh / ADAPTER).is_file():
+        return []
+    import adapter_diff  # same folder
+    record = json.loads(adapter_diff.RECORD.read_text()) if adapter_diff.RECORD.exists() else {}
+    _, problems = adapter_diff.diff((fresh / ADAPTER).read_text(encoding="utf-8"), record, ROOT / "plugin")
+    lines = [f"upstream's Claude Code adapter changed ({ADAPTER}); review with python3 tools/adapter_diff.py:"]
+    lines += [f"  {p}" for p in problems] or ["  every row still matches port/adapter.json"]
+    return lines
+
+
+def summary_markdown(meta: dict, commit: str, version: str, commits, items: list[dict],
+                     adapter: list[str] | None = None) -> str:
     web = web_base(meta["repository"])
     out = [f"### Upstream commits, {meta['commit'][:12]} ({meta['version']}) to {commit[:12]} ({version})", ""]
     if commits is None:
@@ -209,6 +225,8 @@ def summary_markdown(meta: dict, commit: str, version: str, commits, items: list
             if it.get("upstream_closed"):
                 bug += " (closed: upstream may have fixed this; drop our copy if so)"
             out.append(f"| `port/overrides/{it['path']}` | {label} | {bug} |")
+    if adapter:
+        out += ["", "### Upstream's Claude Code adapter", "", "```", *adapter, "```"]
     return "\n".join(out) + "\n"
 
 
@@ -247,6 +265,9 @@ def main() -> int:
                 print(f"  {label}: {f}")
         if not (added or removed or changed):
             print("  no changes")
+        adapter = adapter_report(fresh, added + changed)
+        for line in adapter:
+            print(line)
 
         labels = ("jutsu override", f"upstream {meta['commit'][:12]}", f"upstream {commit[:12]}")
         items = plan_merges(VENDOR, fresh, build, labels)
@@ -269,7 +290,7 @@ def main() -> int:
         meta.update(commit=commit, version=version)
         UPSTREAM.write_text(json.dumps(meta, indent=2) + "\n")
         if args.summary:
-            Path(args.summary).write_text(summary_markdown(meta_old, commit, version, commits, items))
+            Path(args.summary).write_text(summary_markdown(meta_old, commit, version, commits, items, adapter))
         print(f"vendor/pstack updated to {version} ({commit[:12]}).")
         with tempfile.TemporaryDirectory(prefix="jutsu-sync-build-") as out:
             try:

@@ -81,6 +81,31 @@ jutsu 0.2.0 adopted these after reading the ports above. Each is credited in [NO
 
 Where others still do better: pmwoz keeps 9 drift files where jutsu keeps 52 whole-file overrides, so jutsu reviews more per upstream release. pstack-claude and open-pstack cover more runtimes. jutsu targets Claude Code only.
 
+## Official Claude Code adapter
+
+Since 0.15.29 (cursor/plugins [#637](https://github.com/cursor/plugins/pull/637), [#705](https://github.com/cursor/plugins/pull/705)), upstream pstack installs in Claude Code itself, as `pstack@cursor-plugins`. Its `docs/harness/claude-code.md` maps each Cursor name to Claude Code. jutsu leaves that file out of the plugin, and `tools/adapter_diff.py` checks each of its 29 rows against `port/adapter.json`. Checked 2026-10-20.
+
+jutsu took two ideas from it: the models file in Claude Code's `rules/` folder, and the exact `Skipped in Claude Code:` line. The cross-check also found one jutsu gap: `SendMessage` resumes a finished subagent, not only a live one.
+
+Deliberate differences:
+
+| Adapter row | Upstream's adapter | jutsu | Why |
+|---|---|---|---|
+| `environment: "cloud"` | `Agent` `isolation: "worktree"` | `delegate_task` `isolation: "worktree"` in T3, else a hand-made worktree from HEAD | `Agent` worktrees branch from the remote default branch, so local and stacked commits are missing |
+| `cloud_base_branch` | the worker checks out the branch | the worktree is made at that commit | one checkout per writer |
+| Non-Claude model slug | session model | the `t3:` provider through `delegate_task` | keeps review panels cross-vendor |
+| Models file | `~/.claude/rules/pstack-models.md` | `rules/jutsu-models.md` under `$CLAUDE_CONFIG_DIR`, repo file wins | the two plugins never read each other's format; T3 runs several config dirs |
+| Role value | `opus high` | `opus @high`, `inherit`, `t3:<id>/<model> @<effort>` | carries T3 targets |
+| Transcripts | each `/` and `.` becomes `-` | every non-alphanumeric character becomes `-`, cut at 200 plus a hash | Claude Code's real rule; paths with `_` or spaces differ |
+| Todo list | `TodoWrite`, else in the reply | task tools, else `.audit/<slug>.todo.md` | a reply list does not survive compaction |
+| Cursor Automations | skip | `schedule_task` for routines, ticks, and webhooks; skip only Automations' own calls | T3 has schedules and webhooks |
+| `resume` | spawn a new agent with the old result | `SendMessage` | resumes with full history |
+| `run_in_background` | omit | pass `true` | harmless; background is the default |
+| `Grep`, `Glob` | `Bash` with `rg` when absent | no rule | Claude Code supplies search tools |
+| GitHub links | read the local copy | link jutsu's public copy | jutsu does not ship upstream's guide or README |
+
+`python3 tools/adapter_diff.py` prints the current list. A sync that changes the adapter lists each changed or new row.
+
 ## Known gaps in jutsu
 
 - 0.2.0 has not been rerun in the T3 desktop app. Its live run used Claude Code headless in stream-json mode, the mode T3 uses ([TESTED.md](TESTED.md)). The 0.1.0 T3 runs still stand for what did not change.
