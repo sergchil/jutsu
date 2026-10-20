@@ -2,6 +2,31 @@
 
 Each result was read from the Claude transcript, git, GitHub, or a screenshot, not from the agent's own summary.
 
+## 0.4.0 (2026-10-20)
+
+Automated, plus a marketplace install into a throwaway Claude config dir. Not run live in a Claude Code or T3 session.
+
+| Suite | Result |
+|---|---|
+| `python3 -m unittest discover -s tests` | 165 pass, including the worktree audit on 26 real worktrees (build and cache folders, reflog-only commits, locked worktrees), `checkpoint.sh` on a real linked worktree that is then removed, the adherence count on fixture transcripts, and the installer skipping a config dir with the marketplace copy |
+| `bun test --timeout 30000` in `poteto-mode/scripts`, on a clean copy | 95 pass |
+| `python3 tools/build.py --check`, `python3 tools/check.py`, `python3 tools/adapter_diff.py` | clean |
+| `claude plugin validate .` and `claude plugin validate ./plugin` (Claude Code 2.1.304) | Validation passed |
+| Marketplace install with `CLAUDE_CONFIG_DIR` set to a scratch dir: `claude plugin marketplace add <copy of this repo>`, `claude plugin install jutsu@jutsu` | Installed and enabled as `jutsu@jutsu`. A `git-subdir` source, which copies `plugin/` into the plugin cache as a GitHub install does, listed 32 skills and 4 hooks in `claude plugin details`, with no root `/jutsu` skill. The cached `hooks/jutsu-mode`, run with that copy's `CLAUDE_PLUGIN_ROOT` and a data dir, turned the mode on from `$jutsu` and named the cached router path |
+| GraphQL read for pending merges on a real PR (`sergchil/jutsu#7`) | Returned `autoMergeRequest: null` and `isInMergeQueue: false`. `dequeuePullRequest` takes `id`, checked by schema introspection. No mutation was run |
+
+**Router adherence** (`python3 tools/adherence.py`, read-only, on this machine's `~/.claude/projects` on 2026-10-20; counts only):
+
+| Population | Count | Opened the router | A playbook | A principle |
+|---|---|---|---|---|
+| Main sessions with jutsu mode on (323 prompts sent while on) | 10 | 7 (70%) | 1 (10%) | 0 |
+| `jutsu:poteto-agent` subagents of those sessions | 24 (12 reached by the `SubagentStart` hook) | 23 (96%) | 2 (8%) | 1 (4%) |
+| Other subagents of those sessions | 21 (0 reached) | 0 | 0 | 0 |
+
+pstack-claude's issue #264 reported 19% router, 3% playbook, and 3% principle over 1,725 sessions, and 76%, 5%, 14% for its poteto-agent. jutsu's sample is one user and 10 sessions, and it counts only `Read` calls, so treat it as a first reading. The low playbook rate is the gap to look at next.
+
+Not checked: `/plugin marketplace add sergchil/jutsu` from GitHub (the branch is not pushed), the marketplace install inside a T3 thread or T3's `$` picker, `checkpoint.sh` and the merge-queue steps in a live run, and `/jutsu:thermo-nuclear-review` on a real diff.
+
 ## 0.3.0 (2026-10-20)
 
 Automated only. Not run live in Claude Code or the T3 app.
