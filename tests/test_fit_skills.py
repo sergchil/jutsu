@@ -72,6 +72,32 @@ class FitSkillsTest(unittest.TestCase):
         self.assertNotIn("A Markdown table is not a visual", t)
         self.assertIn("Mermaid", t)
         self.assertIn("html_render", t)
+        self.assertIn("never captures a screenshot", t)
+        self.assertIn("embed it inline", t)
+
+    def test_models_file_lives_in_claude_rules(self):
+        setup = read("skills/setup-pstack/SKILL.md")
+        self.assertIn("${CLAUDE_CONFIG_DIR:-$HOME/.claude}/rules/jutsu-models.md", setup)
+        self.assertIn("https://code.claude.com/docs/en/memory#user-level-rules", setup)
+        self.assertIn("/jutsu:create-formal-verification-skill", setup)
+        roles = read("skills/poteto-mode/references/runtime.md").split("## Roles", 1)[1].split("\n## ", 1)[0]
+        for needle in (".claude/jutsu-models.md", "rules/jutsu-models.md", "already in your context",
+                       "read the file", "Ignore `pstack-models.md`"):
+            self.assertIn(needle, roles)
+
+    def test_skip_line_only_for_cursor_only_steps(self):
+        t = read("skills/poteto-mode/references/runtime.md")
+        self.assertIn("write exactly `Skipped in Claude Code: <step>. <reason>.`", t)
+        skip = t.split("## Cursor-only steps", 1)[1].split("\n## ", 1)[0]
+        for counterpart in ("schedule_task", "watch_pull_request", "worktree"):
+            self.assertIn(counterpart, skip)
+
+    def test_formal_verification_skill_never_takes_the_verify_name(self):
+        t = read("skills/create-formal-verification-skill/SKILL.md")
+        self.assertIn(".claude/skills/<name>/SKILL.md", t)
+        self.assertIn("never `verify`", t)
+        for s in ("sharpen", "create-formal-verification-skill", "maintain-formal-verification-skill"):
+            self.assertIn(f"/jutsu:{s}", read("skills/poteto-help/SKILL.md"), s)
 
     def test_teach_has_no_generated_images(self):
         t = read("skills/teach/SKILL.md")

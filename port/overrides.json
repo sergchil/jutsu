@@ -29,6 +29,11 @@
     "upstream": null,
     "why": "Uses Claude Code skill dirs, Claude transcripts, and AskUserQuestion limits instead of Cursor's create-skill, .cursor paths, and AskQuestion."
   },
+  "skills/create-formal-verification-skill/SKILL.md": {
+    "kind": "runtime",
+    "upstream": null,
+    "why": "The generated skill goes to .claude/skills/<name>/, is committed for T3 worktree threads, and never takes the name verify, which the app verification skill owns."
+  },
   "skills/create-verification-skill/SKILL.md": {
     "kind": "runtime",
     "upstream": null,
@@ -52,7 +57,7 @@
   "skills/ketchup/SKILL.md": {
     "kind": "runtime",
     "upstream": null,
-    "why": "T3 renders Mermaid and tables, and a read-only catch-up cannot take screenshots, so visuals use those and no placeholder box."
+    "why": "T3 renders Mermaid, tables, and Markdown images, so visuals use those, and a read-only catch-up embeds existing screenshots but never captures one."
   },
   "skills/maintain-verification-skill/SKILL.md": {
     "kind": "runtime",
@@ -67,7 +72,7 @@
   "skills/poteto-help/SKILL.md": {
     "kind": "naming",
     "upstream": null,
-    "why": "Rewritten for jutsu: /jutsu commands, AskUserQuestion, and jutsu's own pages instead of Cursor's guide."
+    "why": "Rewritten for jutsu: /jutsu commands, AskUserQuestion, and jutsu's own pages, and drops Cursor's install steps and the excluded make-bot-ui row."
   },
   "skills/poteto-help/references/prompting.md": {
     "kind": "runtime",
@@ -252,7 +257,7 @@
   "skills/setup-pstack/SKILL.md": {
     "kind": "runtime",
     "upstream": null,
-    "why": "Writes jutsu-models.md with Agent aliases and effort levels, and reads T3's orchestrator_capabilities, instead of a Cursor rule."
+    "why": "Writes jutsu-models.md to the Claude config dir's rules/ folder with Agent aliases and effort levels, and reads T3's orchestrator_capabilities, instead of a Cursor rule."
   },
   "skills/show-me-your-work/SKILL.md": {
     "kind": "runtime",

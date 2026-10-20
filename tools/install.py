@@ -176,7 +176,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Install jutsu into each Claude Code config dir T3 uses.")
     ap.add_argument("--uninstall", action="store_true")
     ap.add_argument("--purge", action="store_true",
-                    help="with --uninstall, also remove jutsu's session state and its jutsu-models.md")
+                    help="with --uninstall, also remove jutsu's session state and its jutsu-models.md (rules/ and the 0.2 location)")
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--config-dir", action="append", default=[], help="add a Claude config dir (repeatable)")
@@ -232,11 +232,13 @@ def main() -> int:
                     if not args.dry_run:
                         shutil.rmtree(data)
                     print(f"  removed {data}")
-                models = config_dir / "jutsu-models.md"
-                if models.is_file():
-                    if not args.dry_run:
-                        models.unlink()
-                    print(f"  removed {models}")
+                for models in (config_dir / "rules" / "jutsu-models.md", config_dir / "jutsu-models.md"):
+                    if models.is_file():
+                        if not args.dry_run:
+                            models.unlink()
+                        print(f"  removed {models}")
+            elif (config_dir / "rules" / "jutsu-models.md").is_file():
+                print(f"  kept {config_dir / 'rules' / 'jutsu-models.md'}. Claude Code still loads it into every session. --purge removes it.")
             continue
         if state == "ours":
             print("  already linked")

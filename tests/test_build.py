@@ -48,7 +48,7 @@ class BuildTest(unittest.TestCase):
     def test_vendor_is_untouched_upstream(self):
         vendor = ROOT / "vendor" / "pstack"
         self.assertTrue((vendor / ".cursor-plugin" / "plugin.json").exists())
-        self.assertTrue((vendor / "skills" / "poteto-mode" / "SKILL.md").read_text().startswith("---\nname: Poteto Mode"))
+        self.assertTrue((vendor / "skills" / "poteto-mode" / "SKILL.md").read_text().startswith("---\nname: poteto-mode\n"))
 
     def test_plugin_token_resolves_relative_to_each_file(self):
         self.assertEqual(build.resolve_plugin_token("SKILL.md", "{{plugin}}/x"), "./x")
