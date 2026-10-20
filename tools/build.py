@@ -42,6 +42,11 @@ class BuildError(Exception):
     pass
 
 
+def junk(path: Path) -> bool:
+    """A dotfile, such as Finder's .DS_Store, is never part of the port. Dot folders such as .claude-plugin/ are kept."""
+    return path.name.startswith(".")
+
+
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -207,7 +212,7 @@ def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
     produced: dict[str, str] = {}
 
     for src in sorted(vendor.rglob("*")):
-        if not src.is_file():
+        if not src.is_file() or junk(src):
             continue
         rel = src.relative_to(vendor).as_posix()
         out_rel = map_path(rel, spec)
@@ -250,7 +255,7 @@ def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
             problems.append(f"upstream removed the file behind port/overrides/{out_rel}; delete the override and its lock entry")
     override_files = set()
     for ov in sorted(OVERRIDES.rglob("*")):
-        if ov.is_file() and ov.name != ".DS_Store":
+        if ov.is_file() and not junk(ov):
             out_rel = ov.relative_to(OVERRIDES).as_posix()
             override_files.add(out_rel)
             if out_rel not in produced:
@@ -263,7 +268,7 @@ def build(out_dir: Path, relock=False, check_lock: bool = True) -> list[str]:
         LOCK.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     for src in sorted(ADDED.rglob("*")):
-        if not src.is_file() or src.name == ".DS_Store":
+        if not src.is_file() or junk(src):
             continue
         out_rel = src.relative_to(ADDED).as_posix()
         if out_rel in produced:
@@ -303,7 +308,7 @@ RUNTIME_ONLY = ("node_modules",)
 def tree_files(root: Path) -> set[str]:
     """Files in a plugin tree, without dependencies the bundled scripts install at runtime."""
     return {p.relative_to(root).as_posix() for p in root.rglob("*")
-            if p.is_file() and not any(part in RUNTIME_ONLY for part in p.relative_to(root).parts)}
+            if p.is_file() and not junk(p) and not any(part in RUNTIME_ONLY for part in p.relative_to(root).parts)}
 
 
 def trees_equal(a: Path, b: Path) -> list[str]:

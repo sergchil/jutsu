@@ -59,7 +59,8 @@ def run(*cmd: str, cwd: Path | None = None) -> str:
 
 
 def tree_files(root: Path) -> set[str]:
-    return {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
+    """Files under root, without dotfiles such as Finder's .DS_Store (see build.junk)."""
+    return {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file() and not p.name.startswith(".")}
 
 
 def sha256(data: bytes) -> str:
@@ -97,7 +98,7 @@ def plan_merges(old_root: Path, new_root: Path, build, labels: tuple[str, str, s
     old_map, new_map = mapped(old_root), mapped(new_root)
     items = []
     for ov in sorted(OVERRIDES.rglob("*")):
-        if not ov.is_file() or ov.name == ".DS_Store":
+        if not ov.is_file() or build.junk(ov):
             continue
         out_rel = ov.relative_to(OVERRIDES).as_posix()
         old_rel, new_rel = old_map.get(out_rel), new_map.get(out_rel)
