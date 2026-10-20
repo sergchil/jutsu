@@ -136,6 +136,9 @@ Two writers never share a checkout (principle-separate-before-serializing-shared
 - **A merge or close does not wake you.** The watch ends silently. When you wait on a merge, also keep a `schedule_task` heartbeat (every 10 to 30 minutes) that checks the PR state, and delete it after.
 - Ten comment-only wakes in a row end the watch. Settling or archiving the thread, or the user pressing Stop, ends it too. Unsettle a settled thread (`t3_thread_organize`) before a new watch. Call `unwatch_pull_request` before handing the thread back to the user.
 - **Review guides.** `write_pull_request_guides` starts a maintainer's tour of a PR (minutes per PR) and `read_pull_request_guide` reads it. A guide explains; it does not judge. Use it as a cheap first read before an interrogate panel, never as the verdict. It fails when the user turned guides off.
+- **Clear pending merges before a restack.** An armed auto-merge or a merge-queue entry can land a head or base no verdict covers. Before you rebase, force-push, or retarget a PR, and for each PR above it whose head or base moves too, read both in one call:
+  `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){id headRefOid baseRefName autoMergeRequest{enabledAt} isInMergeQueue}}}' -f o=<owner> -f r=<repo> -F n=<pr>`.
+  Disarm auto-merge with `gh pr merge <pr> -R <owner>/<repo> --disable-auto`. Leave the queue with `gh api graphql -f query='mutation($id:ID!){dequeuePullRequest(input:{id:$id}){clientMutationId}}' -f id=<id>`. Read again: go ahead only when `autoMergeRequest` is null, `isInMergeQueue` is false, and the head and base still match the first read. A failed read or a missing field is not "none pending". On a mismatch, stop and reconcile, since another writer may have re-armed it. Arm `--auto` again only on a PR whose verdict covers its new head (Shipping step 4). `gh pr view --json` has no queue field as of gh 2.102, so the queue read is GraphQL (schema checked on 2026-10-20). Source: pstack-claude's merge-safety reference and its `ship-pr` command.
 - **Read state** with the bundled watcher (bun): `scripts/watch-pr/watch-pr --status-only` under this file's skill directory prints one status table (checks, review state, `mergeStateStatus`, head SHA) and exits. **Judge** by running it once without `--status-only` when no check is pending. It returns the verdict at once. A green check list is not a verdict, and the watcher reports `READY` on a branch that is `BEHIND` its base, so read `mergeStateStatus` yourself.
 
 ## Questions
@@ -181,7 +184,7 @@ for p in .jutsu/ .audit/; do grep -qxF "$p" "$exclude" 2>/dev/null || printf '%s
 printf '%s\n' "$main/.jutsu"
 ```
 
-Use the printed absolute path in every brief, and never `.git/info/exclude` by hand (in a worktree `.git` is a file).
+Use the printed absolute path in every brief, and never `.git/info/exclude` by hand (in a worktree `.git` is a file). Pause safely's `scripts/checkpoint.sh` writes `checkpoint` beside `resume.md` there, and Session pickup verifies it.
 
 ## Missing companions
 

@@ -1,7 +1,7 @@
 {
   "name": "jutsu",
   "displayName": "jutsu",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "poteto's pstack for Claude Code in T3 Code: one mode that routes every task to a rigorous playbook, principles behind each decision, and verification you can trust.",
   "author": { "name": "Sergey Chilingaryan", "url": "https://github.com/sergchil" },
   "homepage": "https://github.com/sergchil/jutsu",

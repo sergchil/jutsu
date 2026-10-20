@@ -13,6 +13,13 @@
 #   origin/HEAD is the remote's default branch, not necessarily the branch PRs
 #   merge into; pass -b when they differ.
 #
+# DIRTY counts ignored paths outside build and cache directories (the
+# DISPOSABLE list below): .env counts, build/ and node_modules/ do not.
+# reflog:N is N commits only this worktree's HEAD reflog reaches (left behind by
+# a detached checkout); `git worktree remove` deletes that reflog. LOCKED is the
+# reason given to `git worktree lock`, or "-". From pstack-claude's
+# worktree-audit.mjs (MIT).
+#
 # T3 column: "root" when the worktree sits under a T3 worktrees folder
 # (<T3 home>/worktrees, the worktreesDirectory setting, or a previous one),
 # "thread" when a live T3 thread is bound to it, "root+thread" for both, "-"
@@ -128,10 +135,25 @@ t3_signal() {
 	echo "${sig:--}"
 }
 
-echo "# base: $base"
-printf "SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT\tT3\tBUCKET\tWORKTREE\n"
+# An ignored path under one of these names is rebuildable build or cache
+# output. Any other ignored path, such as .env, may exist nowhere else.
+DISPOSABLE=".build .cache .dart_tool .DS_Store .gradle .lake .lycheecache .mypy_cache .next .nuxt"
+DISPOSABLE="$DISPOSABLE .parcel-cache .pytest_cache .ruff_cache .svelte-kit .tox .turbo .venv __pycache__"
+DISPOSABLE="$DISPOSABLE build coverage DerivedData dist node_modules target venv"
 
-git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt; do
+# Commits some branch reflog lists. Branch reflogs are shared and survive a
+# worktree removal, so a commit in one is not lost with the worktree.
+branch_logged=$(mktemp)
+git rev-list --walk-reflogs --branches 2>/dev/null | sed 's/^/^/' > "$branch_logged"
+
+echo "# base: $base"
+printf "SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT\tT3\tLOCKED\tBUCKET\tWORKTREE\n"
+
+git worktree list --porcelain | awk '
+	/^worktree /{ if (p != "") print p "\t" l; p = substr($0, 10); l = "-" }
+	/^locked$/{ l = "locked" }
+	/^locked /{ l = substr($0, 8); gsub(/[\t ]+/, " ", l) }
+	END{ if (p != "") print p "\t" l }' | while IFS=$'\t' read -r wt locked; do
 	[ "$wt" = "$main_wt" ] && continue
 
 	size=$(du -sh "$wt" 2>/dev/null | awk '{print $1}')
@@ -152,13 +174,34 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
 		--ignore-submodules=none 2>/dev/null); then
 		wip=$(printf '%s\n' "$porcelain" | grep -cvE '^(\?\?|!!) |^$')
 		untracked=$(printf '%s\n' "$porcelain" | grep -c '^?? ')
-		ignored=$(printf '%s\n' "$porcelain" | grep -c '^!! ')
+		ignored=$(printf '%s\n' "$porcelain" | awk -v d="$DISPOSABLE" '
+			BEGIN { n = split(d, a, " "); for (i = 1; i <= n; i++) if (a[i] != "") D[a[i]] = 1 }
+			/^!! / { p = substr($0, 4); gsub(/^"|"$/, "", p); m = split(p, q, "/"); keep = 1
+				for (i = 1; i <= m; i++) if (q[i] in D) { keep = 0; break }
+				c += keep }
+			END { print c + 0 }')
 		dirty=""
+		# A count that is not a number means a probe failed: hold the folder.
+		case "$wip$untracked$ignored" in *[!0-9]*|"") dirty=unknown ;; esac
+		[ "$dirty" = unknown ] || {
 		[ "$wip" -gt 0 ] && dirty="wip:$wip"
 		[ "$untracked" -gt 0 ] && dirty="${dirty:+$dirty,}untracked:$untracked"
 		[ "$ignored" -gt 0 ] && dirty="${dirty:+$dirty,}ignored:$ignored"
-		[ -z "$dirty" ] && dirty=clean
+		}
 	else dirty=unknown; fi
+	# Commits only this worktree's HEAD reflog reaches: not HEAD itself (the
+	# REMOTE column covers it), not on any branch, tag, or remote, and in no
+	# branch reflog. They go with the worktree.
+	# A failed count is unknown, which holds the folder like a found commit.
+	reflog=0
+	if [ "$dirty" != unknown ] && logged=$(git -C "$wt" rev-list --walk-reflogs HEAD 2>/dev/null) \
+		&& [ -n "$logged" ]; then
+		reflog=$({ printf '%s\n' "$logged"; cat "$branch_logged"; echo "^HEAD"; } \
+			| git -C "$wt" rev-list --count --not --branches --tags --remotes --stdin 2>/dev/null) || reflog="?"
+		case "$reflog" in ""|*[!0-9]*) reflog="?" ;; esac
+		[ "$reflog" != 0 ] && dirty="${dirty:+$dirty,}reflog:$reflog"
+	fi
+	[ -z "$dirty" ] && dirty=clean
 
 	branch=$(git -C "$wt" symbolic-ref --quiet --short HEAD 2>/dev/null || echo "")
 	if [ -z "$branch" ]; then remote=detached
@@ -209,20 +252,23 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
 	case "$dirty" in wip:*|unknown) bucket=hold-wip ;; *)
 		case "$dirty" in *untracked:*|*ignored:*) bucket=hold-local ;; *)
 			case "$pr" in */open|*/draft) bucket=hold-open-pr ;; *)
-				if [ "$unpushed" = yes ]; then bucket=hold-unpushed
+				if [ "$reflog" != 0 ]; then bucket=hold-reflog
+				elif [ "$unpushed" = yes ]; then bucket=hold-unpushed
 				elif [ "$recent" = yes ]; then bucket=verify-recent-chat
 				elif [ "$merged" = YES ] || [ "$pr_merged" = true ]; then bucket=safe
 				else bucket=review; fi ;;
 			esac ;;
 		esac ;;
 	esac
+	# Another tool or agent locked it, and `git worktree remove` refuses it.
+	[ "$locked" != - ] && bucket=hold-locked
 	# T3 cleans its own worktrees and a thread may still use this one, so the
 	# playbook only reports it. The other columns still show what is at stake.
 	t3=$(t3_signal "$wt")
 	[ "$t3" != - ] && bucket=t3-managed
 
-	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
-		"$size" "$age" "$merged" "$dirty" "$remote" "$pr" "$last" "$t3" "$bucket" "$wt"
+	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+		"$size" "$age" "$merged" "$dirty" "$remote" "$pr" "$last" "$t3" "$locked" "$bucket" "$wt"
 done | sort -t$'\t' -k1,1 -rh
 
-rm -f "$prs" "$t3_roots" "$t3_bound"
+rm -f "$prs" "$t3_roots" "$t3_bound" "$branch_logged"

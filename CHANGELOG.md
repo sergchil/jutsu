@@ -2,6 +2,17 @@
 
 Notable changes to jutsu. Versions follow the plugin version in `plugin/.claude-plugin/plugin.json`.
 
+## 0.4.0 (2026-10-20)
+
+Ideas from [pstack-claude](https://github.com/michael-denyer/pstack-claude), each judged for Claude Code inside T3 first.
+
+- Install from a marketplace: `/plugin marketplace add sergchil/jutsu`, then `/plugin install jutsu@jutsu`. There the mode command is `/jutsu:poteto-mode`, since plugin commands always carry the plugin name. `./install.sh` stays for T3 instances with their own Claude config dir, and it skips a config dir that has the marketplace copy, since Claude Code would load only that one.
+- Worktree audit: ignored build and cache folders (`build/`, `dist/`, `node_modules/`, `.next/`, `target/`, `__pycache__/`, `coverage/`, and similar) no longer hold a worktree. `.env` and other ignored files still do. New buckets: `hold-reflog` for commits only the worktree's HEAD reflog reaches, which were bucketed `safe` before, and `hold-locked` for a worktree locked with `git worktree lock` (reason in the new `LOCKED` column). T3-managed worktrees stay `t3-managed`.
+- Pause safely ends with `scripts/checkpoint.sh save <slug>`, which records the branch, head commit, worktree, and hashes of the resume note and todo file beside the note. It refuses an uncommitted tree or a detached HEAD. Session pickup runs `checkpoint.sh verify <slug>` and accounts for every changed or gone fact (new commits, a rewritten branch, a worktree T3 deleted) before it trusts the note.
+- Before a rebase, force-push, or retarget, Autopilot-stack, Shipping, and Orchestrate's stacker clear a pending auto-merge (`gh pr merge --disable-auto`) and a merge-queue entry (GraphQL `dequeuePullRequest`), then read both back.
+- New skill `/jutsu:thermo-nuclear-review` from Cursor's thermos plugin (MIT): one read-only reviewer on bugs, security, broken dev setup, and feature-flag leaks, with the PR's bot comments checked after. thermos and its code-quality review were not imported: `/jutsu:interrogate` already runs a model panel with the same code-quality rubric. Now 32 skills.
+- `tools/adherence.py` counts, from Claude transcripts and read-only, how often sessions in jutsu mode open the router, a playbook, and a principle (the method of pstack-claude issue #264). First numbers are in [docs/TESTED.md](docs/TESTED.md).
+
 ## 0.3.0 (2026-10-20)
 
 - Tracks pstack 0.15.29. New skills `/jutsu:sharpen`, `/jutsu:create-formal-verification-skill`, and `/jutsu:maintain-formal-verification-skill`, now 31 skills. `/jutsu:setup-pstack` also offers a formal verification skill. `/jutsu:ketchup` lists every call waiting on you, and the autopilots catch you up with it. A formal verification skill goes to `.claude/skills/<name>/` and never takes the name `verify`.

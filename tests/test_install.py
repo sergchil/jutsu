@@ -80,6 +80,51 @@ class InstallTest(unittest.TestCase):
         self.assertTrue(self.link(shell_dir).is_symlink())
         self.assertTrue(self.link(self.default).is_symlink())
 
+    def mark_marketplace_install(self, d: Path, plugin_id="jutsu@jutsu", via_settings=False):
+        if via_settings:
+            (d / "settings.json").write_text(json.dumps({"enabledPlugins": {plugin_id: True}}))
+            return
+        (d / "plugins").mkdir(exist_ok=True)
+        (d / "plugins" / "installed_plugins.json").write_text(json.dumps({"version": 2, "plugins": {
+            plugin_id: [{"scope": "user", "installPath": str(d / "plugins" / "cache" / "jutsu" / "jutsu" / "0.4.0")}],
+            "other@jutsu": [{"scope": "user"}]}}))
+
+    def test_does_not_link_where_jutsu_is_installed_from_a_marketplace(self):
+        self.mark_marketplace_install(self.work)
+        self.mark_marketplace_install(self.envdir, "jutsu@sergchil-jutsu", via_settings=True)
+        r = self.run_install()
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertFalse(self.link(self.work).exists())
+        self.assertFalse(self.link(self.envdir).exists())
+        self.assertTrue(self.link(self.default).is_symlink())
+        self.assertIn("jutsu is installed from a marketplace here (jutsu@jutsu)", r.stdout)
+        self.assertIn("jutsu@sergchil-jutsu", r.stdout)
+        self.assertIn(f"CLAUDE_CONFIG_DIR={self.work.resolve()} claude plugin uninstall jutsu@jutsu", r.stdout)
+
+    def test_reports_a_link_and_a_marketplace_install_both_active(self):
+        self.assertEqual(self.run_install().returncode, 0)
+        self.mark_marketplace_install(self.default)
+        r = self.run_install("--status")
+        self.assertIn("conflict: jutsu is also installed from a marketplace (jutsu@jutsu)", r.stdout)
+        r = self.run_install()
+        self.assertEqual(r.returncode, 1, r.stdout)
+        # The existing link is left for the user to choose.
+        self.assertTrue(self.link(self.default).is_symlink())
+        self.assertIn("./uninstall.sh", r.stdout)
+
+    def test_uninstall_names_a_marketplace_install_it_leaves(self):
+        self.mark_marketplace_install(self.default)
+        r = self.run_install("--uninstall")
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("kept jutsu@jutsu, installed from a marketplace", r.stdout)
+
+    def test_ignores_a_disabled_marketplace_entry_and_the_skills_dir_id(self):
+        (self.default / "settings.json").write_text(json.dumps({"enabledPlugins": {
+            "jutsu@jutsu": False, "jutsu@skills-dir": True}}))
+        r = self.run_install()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertNotIn("marketplace", r.stdout)
+
     def test_is_idempotent(self):
         self.run_install()
         r = self.run_install()

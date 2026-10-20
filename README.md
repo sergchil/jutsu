@@ -15,24 +15,39 @@ One command, `/jutsu`, turns on poteto mode. It routes each task to one of pstac
 
 ## Install
 
+In Claude Code, or in a T3 Claude thread:
+
+```
+/plugin marketplace add sergchil/jutsu
+/plugin install jutsu@jutsu
+```
+
+Start a new thread after the install. A marketplace plugin's commands always carry its name, so the mode command is `/jutsu:poteto-mode <task>`. `$jutsu <task>` at the start of a line works too, through jutsu's mode hook.
+
+**T3 instances with their own Claude config dir.** A marketplace install lands only in the config dir of the session that ran it. When a T3 Claude instance sets its own `homePath` or `CLAUDE_CONFIG_DIR`, install from a clone instead. It links jutsu into every config dir T3 uses and gives the short `/jutsu` command:
+
 ```sh
 git clone https://github.com/sergchil/jutsu.git
 cd jutsu && ./install.sh
 ```
 
-Needs Claude Code 2.1.292+ and Python 3.9+. The T3 tools need T3 Code nightly from 2026-10-03; without T3, jutsu falls back to plain Claude Code. If another pstack port is installed, the installer says how to turn it off.
+Use one of the two per config dir. Claude Code loads a marketplace copy over a linked one, so the installer skips a dir that has the marketplace copy and prints the command that removes it.
+
+Needs Claude Code 2.1.292+, and Python 3.9+ for `./install.sh`. The T3 tools need T3 Code nightly from 2026-10-03; without T3, jutsu falls back to plain Claude Code. If another pstack port is installed, the installer says how to turn it off.
 
 Also needs [bun](https://bun.sh) and the GitHub CLI `gh` on your PATH. Neither ships with macOS or T3. bun runs `watch-pr`, the PR verdict that Babysit and Shipping use, and `orch`, the program store behind Orchestrate. Their first run installs one small package (`commander`) next to the scripts, so it needs the network once. `gh` handles every PR step. The installer warns when either is missing; everything else works without them.
 
 ## Use
 
-- Type `$jutsu <task>` in a T3 thread (or `/jutsu <task>`). Poteto mode stays on for the thread; `/jutsu off` stops it.
+- Type `$jutsu <task>` in a T3 thread, or `/jutsu <task>` (`/jutsu:poteto-mode <task>` with the marketplace install). Poteto mode stays on for the thread; `/jutsu off` stops it (`/jutsu:poteto-mode off` or `$jutsu off` with the marketplace install).
 - More commands: `/jutsu:setup-pstack` picks models and effort per role, `/jutsu:poteto-help` says which skill fits, and `/jutsu:how`, `/jutsu:why`, `/jutsu:arena`, `/jutsu:swarm` and the rest of pstack's skills.
 
 ![Three parallel T3 threads, one worktree each](docs/images/threads.jpg)
 *One request, three changes: jutsu launches a T3 thread per change in its own worktree, then reviews all three.*
 
 ## Uninstall
+
+Marketplace install: `/plugin uninstall jutsu@jutsu`. Clone install:
 
 ```sh
 ./uninstall.sh
@@ -42,7 +57,7 @@ Removes everything jutsu added to each Claude config folder that T3 uses: the pl
 
 ## Update
 
-`git pull`. When poteto releases a new pstack, a weekly GitHub workflow opens a pull request that lists exactly what to port ([docs/UPDATING.md](docs/UPDATING.md)).
+Marketplace install: `/plugin marketplace update jutsu`, then start a new thread. Clone install: `git pull`. When poteto releases a new pstack, a weekly GitHub workflow opens a pull request that lists exactly what to port ([docs/UPDATING.md](docs/UPDATING.md)).
 
 ## Compared with other ports (2026-10-14)
 

@@ -160,6 +160,29 @@ def conflicts(config_dir: Path) -> list[str]:
     return found
 
 
+def marketplace_installs(config_dir: Path) -> list[str]:
+    """Plugin ids such as jutsu@jutsu: jutsu installed from a marketplace in this config dir and not disabled.
+
+    Claude Code loads an installed marketplace plugin over a skills-dir plugin of the same name and
+    reports the skills-dir copy as not loaded (plugins/loading docs), so only one can be active.
+    """
+    try:
+        settings = json.loads((config_dir / "settings.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        settings = {}
+    enabled = settings.get("enabledPlugins") or {}
+    if not isinstance(enabled, dict):
+        enabled = {}
+    try:
+        installed = json.loads((config_dir / "plugins" / "installed_plugins.json").read_text(encoding="utf-8"))
+        installed = installed.get("plugins") or {}
+    except (OSError, ValueError, AttributeError):
+        installed = {}
+    ids = set(installed if isinstance(installed, dict) else ()) | {k for k, v in enabled.items() if v is True}
+    return sorted(i for i in ids if i.startswith(PLUGIN_NAME + "@") and i != PLUGIN_NAME + "@skills-dir"
+                  and enabled.get(i) is not False)
+
+
 def claude_version() -> tuple[int, ...] | None:
     exe = shutil.which("claude")
     if not exe:
@@ -214,8 +237,11 @@ def main() -> int:
         if not config_dir.is_dir():
             print("  skip: this config dir does not exist yet. Start Claude once with it, then rerun.")
             continue
+        market = marketplace_installs(config_dir)
         if args.status:
             print(f"  jutsu link: {state}")
+            for plugin_id in market:
+                print(f"  conflict: jutsu is also installed from a marketplace ({plugin_id})")
             for c in conflicts(config_dir):
                 print(f"  conflict: {c}")
             continue
@@ -226,6 +252,9 @@ def main() -> int:
                 print(f"  removed {link}")
             else:
                 print(f"  nothing to remove ({state})")
+            for plugin_id in market:
+                print(f"  kept {plugin_id}, installed from a marketplace. Remove it with "
+                      f"CLAUDE_CONFIG_DIR={config_dir} claude plugin uninstall {plugin_id}")
             if args.purge:
                 data = config_dir / "plugins" / "data" / DATA_DIR_NAME
                 if data.is_dir():
@@ -239,6 +268,21 @@ def main() -> int:
                         print(f"  removed {models}")
             elif (config_dir / "rules" / "jutsu-models.md").is_file():
                 print(f"  kept {config_dir / 'rules' / 'jutsu-models.md'}. Claude Code still loads it into every session. --purge removes it.")
+            continue
+        if market:
+            ids = ", ".join(market)
+            if state == "ours":
+                print(f"  error: jutsu is linked here and also installed from a marketplace ({ids}). Claude Code loads "
+                      "the marketplace copy and marks the linked one not loaded. Keep one: ./uninstall.sh removes "
+                      "the link, or " + " and ".join(
+                          f"CLAUDE_CONFIG_DIR={config_dir} claude plugin uninstall {i}" for i in market)
+                      + " removes the marketplace copy.")
+            else:
+                print(f"  skip: jutsu is installed from a marketplace here ({ids}), so the link would not load. "
+                      "Keep that install, or remove it first with " + " and ".join(
+                          f"CLAUDE_CONFIG_DIR={config_dir} claude plugin uninstall {i}" for i in market)
+                      + " and rerun.")
+            status = 1
             continue
         if state == "ours":
             print("  already linked")
