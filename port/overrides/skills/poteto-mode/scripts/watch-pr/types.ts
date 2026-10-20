@@ -181,7 +181,9 @@ export type MergeGateReason =
   | "closed-without-merge"
   | "draft-pr"
   | "changes-requested"
-  | "behind-base";
+  | "behind-base"
+  | "review-required"
+  | "merge-blocked";
 export type MergeBlocker =
   | {
       readonly kind: "merge-conflicts";

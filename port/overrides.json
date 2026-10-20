@@ -222,22 +222,22 @@
   "skills/poteto-mode/scripts/watch-pr/policy.test.ts": {
     "kind": "upstream-bug",
     "upstream": "https://github.com/cursor/plugins/pull/510",
-    "why": "Pins the no-CI verdict on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+    "why": "Pins the no-CI verdict on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base; also blocks READY on a missing required review or a BLOCKED merge with clean CI (from pstack-claude)."
   },
   "skills/poteto-mode/scripts/watch-pr/policy.ts": {
     "kind": "upstream-bug",
     "upstream": "https://github.com/cursor/plugins/pull/510",
-    "why": "Confirms no CI over every PR commit, so watch-pr settles on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+    "why": "Confirms no CI over every PR commit, so watch-pr settles on a repo without checks (#510); also blocks READY when GitHub reports the branch BEHIND its base; also blocks READY on a missing required review or a BLOCKED merge with clean CI (from pstack-claude)."
   },
   "skills/poteto-mode/scripts/watch-pr/render.ts": {
     "kind": "upstream-bug",
     "upstream": null,
-    "why": "Prints the action for the new behind-base blocker, so a PR behind a base that requires an up-to-date head is never READY."
+    "why": "Prints the action for the new behind-base blocker, so a PR behind a base that requires an up-to-date head is never READY; also blocks READY on a missing required review or a BLOCKED merge with clean CI (from pstack-claude)."
   },
   "skills/poteto-mode/scripts/watch-pr/types.ts": {
     "kind": "upstream-bug",
     "upstream": "https://github.com/cursor/plugins/pull/510",
-    "why": "Allows an empty check list, which the no-CI verdict needs (#510); also blocks READY when GitHub reports the branch BEHIND its base."
+    "why": "Allows an empty check list, which the no-CI verdict needs (#510); also blocks READY when GitHub reports the branch BEHIND its base; also blocks READY on a missing required review or a BLOCKED merge with clean CI (from pstack-claude)."
   },
   "skills/poteto-mode/scripts/worktree-audit.sh": {
     "kind": "upstream-bug",
