@@ -107,7 +107,7 @@
   "skills/poteto-mode/playbooks/autopilot-stack.md": {
     "kind": "lesson",
     "upstream": null,
-    "why": "Stops writers before a rebase, and unwatches PRs and deletes scheduled ticks before delivery (lessons 2, 6)."
+    "why": "Stops writers before a rebase, and unwatches PRs and deletes scheduled ticks before delivery (lessons 2, 6). Clears pending auto-merge and merge-queue entries before a restack (from pstack-claude)."
   },
   "skills/poteto-mode/playbooks/babysit.md": {
     "kind": "lesson",
@@ -147,7 +147,7 @@
   "skills/poteto-mode/playbooks/orchestrate.md": {
     "kind": "runtime",
     "upstream": null,
-    "why": "Workers are background jutsu:poteto-agent children or launched T3 threads instead of cloud agents, and the store is .jutsu/<slug>/."
+    "why": "Workers are background jutsu:poteto-agent children or launched T3 threads instead of cloud agents, and the store is .jutsu/<slug>/. The stacker clears pending auto-merge and merge-queue entries before a restack (from pstack-claude)."
   },
   "skills/poteto-mode/playbooks/pause-safely.md": {
     "kind": "lesson",
@@ -182,7 +182,7 @@
   "skills/poteto-mode/playbooks/shipping.md": {
     "kind": "lesson",
     "upstream": null,
-    "why": "Runs in a top-level thread, stops writers before a merge, watches with watch_pull_request, and drops Origin (lessons 2, 6, 7)."
+    "why": "Runs in a top-level thread, stops writers before a merge, watches with watch_pull_request, and drops Origin (lessons 2, 6, 7). Clears pending auto-merge and merge-queue entries before a restack (from pstack-claude)."
   },
   "skills/poteto-mode/playbooks/visual-parity.md": {
     "kind": "lesson",
