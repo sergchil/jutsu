@@ -152,7 +152,7 @@
   "skills/poteto-mode/playbooks/pause-safely.md": {
     "kind": "lesson",
     "upstream": null,
-    "why": "Stops each child with task_cancel and checks git status (lessons 1, 17), and writes the resume note under .jutsu/."
+    "why": "Stops each child with task_cancel and checks git status (lessons 1, 17), writes the resume note under .jutsu/, and saves a checkpoint.sh checkpoint pickup can verify (from pstack-claude's resume.mjs)."
   },
   "skills/poteto-mode/playbooks/perf-issue.md": {
     "kind": "runtime",
@@ -177,7 +177,7 @@
   "skills/poteto-mode/playbooks/session-pickup.md": {
     "kind": "lesson",
     "upstream": null,
-    "why": "Finds the prior trail in .jutsu/ resume notes, T3 threads, and Claude transcripts, and todos in .audit/<slug>.todo.md (lesson 21)."
+    "why": "Finds the prior trail in .jutsu/ resume notes, T3 threads, and Claude transcripts, todos in .audit/<slug>.todo.md (lesson 21), and verifies a paused checkpoint with checkpoint.sh before trusting the note."
   },
   "skills/poteto-mode/playbooks/shipping.md": {
     "kind": "lesson",

@@ -181,7 +181,7 @@ for p in .jutsu/ .audit/; do grep -qxF "$p" "$exclude" 2>/dev/null || printf '%s
 printf '%s\n' "$main/.jutsu"
 ```
 
-Use the printed absolute path in every brief, and never `.git/info/exclude` by hand (in a worktree `.git` is a file).
+Use the printed absolute path in every brief, and never `.git/info/exclude` by hand (in a worktree `.git` is a file). Pause safely's `scripts/checkpoint.sh` writes `checkpoint` beside `resume.md` there, and Session pickup verifies it.
 
 ## Missing companions
 
