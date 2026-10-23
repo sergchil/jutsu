@@ -72,25 +72,25 @@ Role defaults. A role line in `jutsu-models.md` overrides one. `/jutsu:setup-pst
 
 Ignore `pstack-models.md`. Upstream pstack's own Claude Code adapter writes it in another format.
 
-- feature, refactoring: `opus @xhigh`
-- bug-fix: `fable @xhigh`
-- perf-issue: `fable @xhigh`
-- hillclimb: `fable @xhigh`
-- judgment and prose: `opus @xhigh`
-- hardest tasks: `opus @xhigh`
-- how explorer: `sonnet @xhigh`
-- how explainer: `opus @xhigh`
-- why investigators: `sonnet @xhigh`
-- why synthesizer: `opus @xhigh`
-- reflect tooling: `sonnet @xhigh`
-- reflect judgment, divergent, synthesizer: `opus @xhigh`
-- swarm workers: `opus @xhigh`
-- arena runners: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
-- arena cross-judge pool: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
-- architect runners: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
-- interrogate reviewers: `opus @xhigh`, `fable @xhigh`, `sonnet @xhigh`
+- feature, refactoring: `opus @high`
+- bug-fix: `opus @high`
+- perf-issue: `fable @high`
+- hillclimb: `opus @high`
+- judgment and prose: `opus @high`
+- hardest tasks: `fable @xhigh`
+- how explorer: `sonnet @medium`
+- how explainer: `opus @high`
+- why investigators: `sonnet @medium`
+- why synthesizer: `opus @high`
+- reflect tooling: `sonnet @high`
+- reflect judgment, divergent, synthesizer: `opus @high`
+- swarm workers: `sonnet @high`
+- arena runners: `opus @high`, `fable @high`
+- arena cross-judge pool: `opus @high`
+- architect runners: `opus @xhigh`
+- interrogate reviewers: `opus @high`, `sonnet @high`
 
-Upstream runs every role at its model's highest reasoning setting, and so do these defaults. `/jutsu:setup-pstack` lowers them for a smaller budget. Per spawn, the router's "Match the model to the job" moves a role's effort up or down from its value here, and a review never goes below `high`.
+These defaults are the `balanced` budget: Opus at `high` for code and judgment, Fable only where a long investigation pays off (perf and the hardest tasks), Sonnet for reading code and for parallel workers, one architect runner, and two reviewers. Upstream runs every role at `xhigh` with three-model panels, which real runs here showed costs hours for ticket-sized work; that is the `large` budget in `/jutsu:setup-pstack`. Per spawn, the router's "Match the model to the job" moves a role's effort up or down from its value here, and a review never goes below `high`.
 
 A value is `<alias> @<effort>`, `inherit` (omit `model` and `effort`), or `t3:<providerInstanceId>/<modelId> @<effort>` for a `delegate_task` target. A value without `@` uses the session effort. An effort a model does not offer falls back to its default, so report the effort the child ran at, not the one you asked for.
 

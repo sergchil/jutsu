@@ -2,6 +2,11 @@
 
 Notable changes to jutsu. Versions follow the plugin version in `plugin/.claude-plugin/plugin.json`.
 
+## 0.4.1 (2026-10-23)
+
+- New default model table, the `balanced` budget: Opus `high` for code and judgment, Fable for perf and the hardest tasks, Sonnet for reading code and parallel workers. The architect runs one Opus runner with no judge, and interrogate runs two reviewers. Upstream's all-`xhigh`, three-model setup is now `large` in `/jutsu:setup-pstack`. Real HoF runs spent 22 minutes on a three-architect contest and 12 h 40 min on a three-reviewer review.
+- `/jutsu:arena` with one runner skips the cross-judge and the graft.
+
 ## 0.4.0 (2026-10-20)
 
 Ideas from [pstack-claude](https://github.com/michael-denyer/pstack-claude), each judged for Claude Code inside T3 first.

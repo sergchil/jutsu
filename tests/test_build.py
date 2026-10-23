@@ -489,7 +489,7 @@ class RoleTableTest(unittest.TestCase):
             if m:
                 defaults[m.group(1)] = ", ".join(v.strip("`") for v in m.group(2).split(", "))
         setup = (ROOT / "port/overrides/skills/setup-pstack/SKILL.md").read_text()
-        block = setup.split("# budget: large (xhigh)\n", 1)[1].split("```", 1)[0]
+        block = setup.split("# budget: balanced (defaults)\n", 1)[1].split("```", 1)[0]
         example = dict(line.split(": ", 1) for line in block.strip().splitlines())
         self.assertEqual(len(defaults), 17)
         self.assertEqual(example, defaults)
