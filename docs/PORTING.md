@@ -83,3 +83,4 @@ Each one comes from a real run of a port, or from T3's source. Put each where it
 ## Tests
 
 `python3 -m unittest discover -s tests`, `python3 tools/build.py --check`, and `python3 tools/adapter_diff.py`.
+49. Upstream's defaults (every role at `xhigh`, three-model architect and review panels) cost hours on ticket-sized work in real HoF runs: 22 minutes of three architects and a judge for one datasource contract, and a three-reviewer interrogate that ran 12 h 40 min through retries. jutsu's defaults are the `balanced` budget: Opus `high` for code, Fable only for perf and the hardest tasks, Sonnet for reading and workers, one architect runner with no judge, two reviewers. `large` in setup-pstack restores upstream's.

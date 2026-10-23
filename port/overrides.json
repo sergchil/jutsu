@@ -22,7 +22,7 @@
   "skills/arena/SKILL.md": {
     "kind": "lesson",
     "upstream": null,
-    "why": "Runners take model and effort from jutsu-models.md, and each writer gets a worktree from HEAD (lesson 4)."
+    "why": "Runners take model and effort from jutsu-models.md, and each writer gets a worktree from HEAD (lesson 4); one runner skips the cross-judge and graft."
   },
   "skills/automate-me/SKILL.md": {
     "kind": "runtime",
@@ -257,7 +257,7 @@
   "skills/setup-pstack/SKILL.md": {
     "kind": "runtime",
     "upstream": null,
-    "why": "Writes jutsu-models.md to the Claude config dir's rules/ folder with Agent aliases and effort levels, and reads T3's orchestrator_capabilities, instead of a Cursor rule."
+    "why": "Writes jutsu-models.md to the Claude config dir's rules/ folder with Agent aliases and effort levels, and reads T3's orchestrator_capabilities, instead of a Cursor rule; adds the balanced budget, jutsu's default."
   },
   "skills/show-me-your-work/SKILL.md": {
     "kind": "runtime",

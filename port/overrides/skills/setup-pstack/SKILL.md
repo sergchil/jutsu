@@ -26,14 +26,16 @@ The defaults are the role lines in [the runtime's Roles]({{plugin}}/skills/potet
 
 ### 3. Budget, map, and confirm
 
-**(a) Ask for a budget.** Ask with `AskUserQuestion`. Offer these four options with these exact labels, and give each a non-empty description of what it costs, because a blank description can stall a T3 thread ([the runtime's Questions]({{plugin}}/skills/poteto-mode/references/runtime.md#questions)). Name the current budget when the file records one. With no file, say that the defaults match `large`: every role runs at `xhigh`, as upstream runs.
+**(a) Ask for a budget.** Ask with `AskUserQuestion`. Offer these four options with these exact labels, and give each a non-empty description of what it costs, because a blank description can stall a T3 thread ([the runtime's Questions]({{plugin}}/skills/poteto-mode/references/runtime.md#questions)). Name the current budget when the file records one. With no file, say that the defaults are `balanced`.
 
-- `unlimited — max reasoning`
-- `large — xhigh reasoning`
+- `balanced — the defaults (recommended)`: Opus `high` for code, Fable for perf and the hardest tasks, Sonnet for reading and workers, one architect runner, two reviewers
+- `large — xhigh reasoning`: upstream's setting, every role at `xhigh`; much slower
 - `medium — high reasoning`
 - `small — medium reasoning`
 
-**(b) Apply it.** Build the working table from the defaults, and on a re-run keep the model of any role the user changed (another alias, a list, a T3 target, or `inherit`). `unlimited`, `large`, `medium`, and `small` set the effort of every alias and T3 entry, panel entries included, to `max`, `xhigh`, `high`, or `medium`. The ladder is `max` > `xhigh` > `high` > `medium` > `low`. In T3, if a model's catalog entry does not offer the target, use the highest effort it offers at or below the target, else mark the role as needing a choice. A non-Claude model's effort ids follow its own descriptor. Map the budget to the nearest choice it offers, in the descriptor's order, and show the mapping. `inherit` does not change. The defaults already run at `xhigh`, so `large` keeps them. `unlimited` turns `opus @xhigh` into `opus @max`, and `small` turns `opus @xhigh` and `fable @xhigh` into `opus @medium` and `fable @medium`.
+Other takes `unlimited`, which sets every role to `max`.
+
+**(b) Apply it.** Build the working table from the defaults, and on a re-run keep the model of any role the user changed (another alias, a list, a T3 target, or `inherit`). `balanced` keeps the defaults as they are. `unlimited`, `large`, `medium`, and `small` set the effort of every alias and T3 entry, panel entries included, to `max`, `xhigh`, `high`, or `medium`. The ladder is `max` > `xhigh` > `high` > `medium` > `low`. In T3, if a model's catalog entry does not offer the target, use the highest effort it offers at or below the target, else mark the role as needing a choice. A non-Claude model's effort ids follow its own descriptor. Map the budget to the nearest choice it offers, in the descriptor's order, and show the mapping. `inherit` does not change. `large` turns `opus @high` into `opus @xhigh`, `unlimited` into `opus @max`, and `small` into `opus @medium`. A level the user sets sets every role, panel entries included; it never adds or removes panel entries.
 
 **(c) Show the roles and confirm.** Show every role with its value, marking any model not confirmed in step 1 as needing a choice. Also list each line step 2 dropped. Ask whether to accept as-is or change specific roles, with `AskUserQuestion` and a non-empty description on every option. The tool takes at most four options per question and adds an Other field, so ask accept or change first. Then, for each role to change, offer up to four values and let Other take the rest. The values are the detected aliases, any T3 targets, and `inherit` (this role runs on the session's model and effort). For panel roles (arena runners, architect runners, interrogate reviewers) the value is a list, and one subagent runs per entry, `inherit` entries included, so the list length sets the count. When step 1 found a runnable non-Claude target, offer it first as one entry of each panel list and of `arena cross-judge pool`, and as a model-race arm for `swarm workers`. When none is runnable, say the panels stay Claude-only, so their diversity is weaker. Name the providers the user could turn on in T3's settings, such as Cursor (it uses the `cursor-agent` CLI) or Codex (T3 offers a managed install). `arena cross-judge pool` is also a list, but Arena selects one value from it whose model family differs from the parent's when possible. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
 
@@ -43,33 +45,33 @@ Every alias written must be in the detected set. Every T3 entry must name a runn
 
 ### 5. Write the file
 
-Create the `rules/` folder if it is missing, then write `jutsu-models.md` there (or the repo file, per the top of this skill) with no frontmatter, the comment lines, a `# budget` line with the chosen label and its target effort, and one line per role, using the same labels as [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles). A value is `<alias> @<effort>`, `t3:<providerInstanceId>/<modelId> @<effort>`, or `inherit`. Overwrite the whole file so re-runs stay idempotent. Then delete a `jutsu-models.md` left directly in the Claude config dir by jutsu 0.2, so only one file sets the roles. Shape, with `large` applied to the defaults:
+Create the `rules/` folder if it is missing, then write `jutsu-models.md` there (or the repo file, per the top of this skill) with no frontmatter, the comment lines, a `# budget` line with the chosen label and its target effort, and one line per role, using the same labels as [the runtime's Roles]({{plugin}}/skills/poteto-mode/references/runtime.md#roles). A value is `<alias> @<effort>`, `t3:<providerInstanceId>/<modelId> @<effort>`, or `inherit`. Overwrite the whole file so re-runs stay idempotent. Then delete a `jutsu-models.md` left directly in the Claude config dir by jutsu 0.2, so only one file sets the roles. Shape, with `balanced` (the defaults):
 
 ```
 # jutsu model configuration, written by /jutsu:setup-pstack. Only jutsu skills read these lines. One line per role. Delete a line to fall back to the runtime default.
 # `inherit` as a value: the role runs on the session's model and effort (omit Agent `model` and `effort`). Inherit entries in a panel list still count toward its fan-out.
 # `t3:<providerInstanceId>/<modelId> @<effort>` runs the role through delegate_task on that T3 provider instance. `@<effort>` is a choice id of that model's effort option.
-# budget: large (xhigh)
-feature, refactoring: opus @xhigh
-bug-fix: fable @xhigh
-perf-issue: fable @xhigh
-hillclimb: fable @xhigh
-judgment and prose: opus @xhigh
-hardest tasks: opus @xhigh
-how explorer: sonnet @xhigh
-how explainer: opus @xhigh
-why investigators: sonnet @xhigh
-why synthesizer: opus @xhigh
-reflect tooling: sonnet @xhigh
-reflect judgment, divergent, synthesizer: opus @xhigh
-arena runners: opus @xhigh, fable @xhigh, sonnet @xhigh
-arena cross-judge pool: opus @xhigh, fable @xhigh, sonnet @xhigh
-swarm workers: opus @xhigh
-architect runners: opus @xhigh, fable @xhigh, sonnet @xhigh
-interrogate reviewers: opus @xhigh, fable @xhigh, sonnet @xhigh
+# budget: balanced (defaults)
+feature, refactoring: opus @high
+bug-fix: opus @high
+perf-issue: fable @high
+hillclimb: opus @high
+judgment and prose: opus @high
+hardest tasks: fable @xhigh
+how explorer: sonnet @medium
+how explainer: opus @high
+why investigators: sonnet @medium
+why synthesizer: opus @high
+reflect tooling: sonnet @high
+reflect judgment, divergent, synthesizer: opus @high
+swarm workers: sonnet @high
+arena runners: opus @high, fable @high
+arena cross-judge pool: opus @high
+architect runners: opus @xhigh
+interrogate reviewers: opus @high, sonnet @high
 ```
 
-A panel entry on another provider or a second Claude account reads `t3:<providerInstanceId>/<modelId> @<effort>`, with the instance id, model id, and effort id from step 1. For example, `interrogate reviewers: opus @xhigh, fable @xhigh, t3:<codexInstanceId>/<modelId> @high`.
+A panel entry on another provider or a second Claude account reads `t3:<providerInstanceId>/<modelId> @<effort>`, with the instance id, model id, and effort id from step 1. For example, `interrogate reviewers: opus @high, sonnet @high, t3:<codexInstanceId>/<modelId> @high`.
 
 ### 6. Confirm
 

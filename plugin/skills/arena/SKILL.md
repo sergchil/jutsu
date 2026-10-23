@@ -25,6 +25,8 @@ If a candidate produces no output, proceed with N-1 and note the dropout.
 
 ## Phase C: Cross-judge
 
+With one runner there is nothing to compare. Skip Phase C and Phase E, read the one candidate yourself against the rubric in Phase D, and verify it in Phase F. This is the default for `architect`, which runs one runner.
+
 After all Phase B candidates complete, choose one model from the `arena cross-judge pool` line in `jutsu-models.md`. If the file or that line is missing, choose from the line's defaults in [the runtime's Roles](../../skills/poteto-mode/references/runtime.md#roles). Prefer a non-Claude T3 target when the pool has one, else a different model family from the parent's. When the judge and the parent are both Claude models, as with the defaults, record in the synthesis note that they share one vendor, per the Model diversity note in the runtime's Roles. Spawn one judge subagent on that model with a read-only brief, at `high` effort or above. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with your reading in Phase D. Don't spawn it while candidates are still writing.
 
 ## Phase D: Pick a base
