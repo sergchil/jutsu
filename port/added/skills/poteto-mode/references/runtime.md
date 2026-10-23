@@ -88,9 +88,9 @@ Ignore `pstack-models.md`. Upstream pstack's own Claude Code adapter writes it i
 - arena runners: `opus @high`, `fable @high`
 - arena cross-judge pool: `opus @high`
 - architect runners: `opus @xhigh`
-- interrogate reviewers: `opus @high`, `sonnet @high`
+- interrogate reviewers: `opus @high`
 
-These defaults are the `balanced` budget: Opus at `high` for code and judgment, Fable only where a long investigation pays off (perf and the hardest tasks), Sonnet for reading code and for parallel workers, one architect runner, and two reviewers. Upstream runs every role at `xhigh` with three-model panels, which real runs here showed costs hours for ticket-sized work; that is the `large` budget in `/jutsu:setup-pstack`. Per spawn, the router's "Match the model to the job" moves a role's effort up or down from its value here, and a review never goes below `high`.
+These defaults are the `balanced` budget: Opus at `high` for code and judgment, Fable only where a long investigation pays off (perf and the hardest tasks), Sonnet for reading code and for parallel workers, one architect runner, and one reviewer. Add entries to a panel line only for big or risky work. Upstream runs every role at `xhigh` with three-model panels, which real runs here showed costs hours for ticket-sized work; that is the `large` budget in `/jutsu:setup-pstack`. Per spawn, the router's "Match the model to the job" moves a role's effort up or down from its value here, and a review never goes below `high`.
 
 A value is `<alias> @<effort>`, `inherit` (omit `model` and `effort`), or `t3:<providerInstanceId>/<modelId> @<effort>` for a `delegate_task` target. A value without `@` uses the session effort. An effort a model does not offer falls back to its default, so report the effort the child ran at, not the one you asked for.
 
