@@ -2,6 +2,10 @@
 
 Notable changes to jutsu. Versions follow the plugin version in `plugin/.claude-plugin/plugin.json`.
 
+## 0.4.2 (2026-10-23)
+
+- One reviewer by default: `interrogate reviewers` is `opus @high`. With one reviewer, interrogate skips the cross-model merge. Add a second entry only for big or risky changes. With one architect runner (0.4.1), a normal `$jutsu` task runs its playbook without contests.
+
 ## 0.4.1 (2026-10-23)
 
 - New default model table, the `balanced` budget: Opus `high` for code and judgment, Fable for perf and the hardest tasks, Sonnet for reading code and parallel workers. The architect runs one Opus runner with no judge, and interrogate runs two reviewers. Upstream's all-`xhigh`, three-model setup is now `large` in `/jutsu:setup-pstack`. Real HoF runs spent 22 minutes on a three-architect contest and 12 h 40 min on a three-reviewer review.

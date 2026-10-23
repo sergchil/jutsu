@@ -40,6 +40,8 @@ If no independent reviewer could run, the review gate stays closed. Report `BLOC
 
 As results come back, build a unified picture. Parse every reviewer's findings. Merge findings that describe the same issue differently, and note which models raised each one. Findings two or more models raised independently are the highest signal. Read a lone model's finding, but weight it accordingly. Note disagreements. If one model flags something and another explicitly says the opposite, that is context for the verdict.
 
+With one reviewer, which is jutsu's default, there is nothing to merge across models. Take its findings as they are, skip the agreement analysis and the Model Diversity section of the report, and go to lead judgment. Add a second entry to the `interrogate reviewers` line only for big or risky changes.
+
 ## Step 5, Lead Judgment
 
 You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator. Read `references/lead-judgment.md` for the full framework. Put every finding in one of four buckets, with the model(s) that raised it and a one-line rationale.

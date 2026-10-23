@@ -52,7 +52,7 @@
   "skills/interrogate/SKILL.md": {
     "kind": "lesson",
     "upstream": null,
-    "why": "Reviewers run as Agent or delegate_task at high effort or above and record what they actually ran at (lessons 11, 12)."
+    "why": "Reviewers run as Agent or delegate_task at high effort or above and record what they actually ran at (lessons 11, 12); one reviewer by default, which skips the cross-model merge."
   },
   "skills/ketchup/SKILL.md": {
     "kind": "runtime",

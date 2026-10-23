@@ -28,7 +28,7 @@ The defaults are the role lines in [the runtime's Roles]({{plugin}}/skills/potet
 
 **(a) Ask for a budget.** Ask with `AskUserQuestion`. Offer these four options with these exact labels, and give each a non-empty description of what it costs, because a blank description can stall a T3 thread ([the runtime's Questions]({{plugin}}/skills/poteto-mode/references/runtime.md#questions)). Name the current budget when the file records one. With no file, say that the defaults are `balanced`.
 
-- `balanced — the defaults (recommended)`: Opus `high` for code, Fable for perf and the hardest tasks, Sonnet for reading and workers, one architect runner, two reviewers
+- `balanced — the defaults (recommended)`: Opus `high` for code, Fable for perf and the hardest tasks, Sonnet for reading and workers, one architect runner, one reviewer
 - `large — xhigh reasoning`: upstream's setting, every role at `xhigh`; much slower
 - `medium — high reasoning`
 - `small — medium reasoning`
@@ -68,10 +68,10 @@ swarm workers: sonnet @high
 arena runners: opus @high, fable @high
 arena cross-judge pool: opus @high
 architect runners: opus @xhigh
-interrogate reviewers: opus @high, sonnet @high
+interrogate reviewers: opus @high
 ```
 
-A panel entry on another provider or a second Claude account reads `t3:<providerInstanceId>/<modelId> @<effort>`, with the instance id, model id, and effort id from step 1. For example, `interrogate reviewers: opus @high, sonnet @high, t3:<codexInstanceId>/<modelId> @high`.
+A panel entry on another provider or a second Claude account reads `t3:<providerInstanceId>/<modelId> @<effort>`, with the instance id, model id, and effort id from step 1. For example, `interrogate reviewers: opus @high, t3:<codexInstanceId>/<modelId> @high`.
 
 ### 6. Confirm
 
