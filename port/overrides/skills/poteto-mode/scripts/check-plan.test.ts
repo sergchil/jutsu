@@ -96,6 +96,7 @@ test("rejects backtick info strings containing a backtick", () => {
 	expect(result.stderr).toContain('"## Example only" after Close the program is not an appendix');
 });
 
+<<<<<<< jutsu override
 const run = (args: string[]) => spawnSync(process.execPath, [checker, ...args], { encoding: "utf8" });
 
 const withPr = (lanes: string, gate: string) =>
@@ -164,4 +165,18 @@ test("a lane must save its evidence and name a pass predicate", () => {
 	const result = runText(withPr(bad, "**Review gate.** None."));
 	expect(result.status).toBe(1);
 	expect(result.stderr).toContain("lane 3 names no evidence file");
+=======
+test("ignores prose punctuation inside matching multi-backtick code spans", () => {
+	for (const count of [2, 3, 4]) {
+		const delimiter = "`".repeat(count);
+		runPlan(`Use ${delimiter}echo \`x\`: “quoted” — example${delimiter}.\n`, 0);
+	}
+});
+
+test("checks prose following a multi-backtick span and unmatched delimiters", () => {
+	const outside = runPlan("Use ``echo `x`: y``. Bad: prose.\n", 1);
+	expect(outside.stderr).toContain("mid-sentence colon");
+	const unmatched = runPlan("Use ``unclosed: bad` here.\n", 1);
+	expect(unmatched.stderr).toContain("mid-sentence colon");
+>>>>>>> upstream 99b609a72323
 });
