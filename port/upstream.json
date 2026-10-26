@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/cursor/plugins.git",
   "path": "pstack",
-  "commit": "88d47514b82e7c44f00f2b2a72ff6dd12158038c",
-  "version": "0.15.29",
+  "commit": "99b609a72323b70204eab407c622f436e858e112",
+  "version": "0.15.32",
   "license": "MIT",
   "author": "Lauren Tan (poteto)"
 }
