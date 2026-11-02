@@ -1,5 +1,6 @@
 ### Autopilot-stack
 
+<<<<<<< jutsu override
 **You own the stack, never the landing. Hand the operator one linear stack of base-chained PRs to review and land.** **Autopilot-full** (`playbooks/autopilot-full.md`) holds except for how verified work leaves. Each tick re-reads both playbooks from the installed plugin, as in Autopilot-full step 6, and this one wins where they differ.
 
 1. **Run Autopilot-full's owners, minus the landing.** Owners report STACK-READY in place of merge-ready. They never rebase onto another branch, trunk included, and never retarget, merge, close a PR, or arm auto-merge, because the root owns the chain's topology and the operator owns the landing. When an item depends on another, its owner branches from that item's branch, not from trunk.
@@ -10,3 +11,11 @@
 **Choosing between the autopilots.** Autopilot-full when the PRs are independent and landing authority is granted. Autopilot-stack when the operator wants review before landing, the work is sequenced or coupled, or merge authority is withheld.
 
 **Reply:** catch the operator up per the **ketchup** skill (`{{plugin}}/skills/ketchup/SKILL.md`), with links to the stack root and tip, whether each link's Guide tab is written, a one-line verdict per link, and anything parked or excluded with the reason.
+=======
+Run the Autopilot-full playbook, but do not merge.
+
+1. **In place of step 5, stop at verified.** Stop when each PR is verified and green at its current head, then hand the PRs to the operator. After the handoff, nobody pushes without the operator's go. Every loop tick prompt names this file, so each tick sees the no-merge rule.
+2. **Stack a PR only when it builds on another PR.** This is the one exception to step 3. Base the PR on the other PR's branch in place of trunk, per **Size and stacks** in `playbooks/opening-a-pr.md`. In place of step 2's rebase onto trunk, each PR rebases onto its parent PR's branch, and the stack root rebases onto trunk. A new head on the lower PR restacks the PRs above it, and a PR whose `git patch-id` the restack leaves unchanged keeps its verdict.
+
+**Reply:** list each PR with its verdict, in place of what merged.
+>>>>>>> upstream ae5650febf43
