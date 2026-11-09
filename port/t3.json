@@ -1,8 +1,8 @@
 {
   "repo": "pingdotgg/t3code",
   "repository": "https://github.com/pingdotgg/t3code.git",
-  "commit": "3417bc3856a25fa772f969faeaf8428a58010d47",
-  "date": "2026-10-14",
+  "commit": "69c217fb15a79607bf2ab74a9d996c322db97100",
+  "date": "2026-11-09",
   "toolkits": "apps/server/src/mcp/toolkits",
   "paths": [
     "apps/server/src/mcp/toolkits",
